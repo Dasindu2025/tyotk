@@ -9,6 +9,7 @@ declare module "next-auth" {
     user: {
       id: string
       email: string
+      emailVerified: Date | null
       role: UserRole
       workspaceId: string
       workspaceName: string
@@ -99,6 +100,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user = {
         id: token.id as string,
         email: token.email as string,
+        emailVerified: null,
         role: token.role as UserRole,
         workspaceId: token.workspaceId as string,
         workspaceName: token.workspaceName as string,

@@ -192,24 +192,54 @@ export async function POST(request: NextRequest) {
     })
 
     // Create all entries in a transaction
-    const createdEntries = await prisma.$transaction(async (tx) => {
-      // Create parent reference ID if split
-      let parentId: string | null = null
+    interface CreatedEntryResult {
+      id: string
+      entryDate: Date
+      startTime: Date
+      endTime: Date
+      durationMinutes: number
+      status: string
+      isSplit: boolean
+    }
 
-      const entries: Array<{
-        id: string
-        entryDate: Date
-        startTime: Date
-        endTime: Date
-        durationMinutes: number
-        status: string
-        isSplit: boolean
-        project: { id: string; projectCode: string; name: string; color: string | null } | null
-        workplace: { id: string; locationCode: string; name: string } | null
-      }> = []
+    const createdEntries: CreatedEntryResult[] = await prisma.$transaction(async (tx) => {
+      const results: CreatedEntryResult[] = []
       
-      for (const splitEntry of splitEntries) {
-        const entry = await tx.timeEntry.create({
+      // Create first entry (parent if split)
+      const firstEntry = splitEntries[0]
+      const parentEntry = await tx.timeEntry.create({
+        data: {
+          userId: session.user.id,
+          entryDate: firstEntry.entryDate,
+          startTime: firstEntry.startTime,
+          endTime: firstEntry.endTime,
+          durationMinutes: firstEntry.durationMinutes,
+          status: "PENDING",
+          notes,
+          projectId,
+          workplaceId,
+          isSplit: firstEntry.isSplit,
+          originalStart: firstEntry.originalStart,
+          originalEnd: firstEntry.originalEnd,
+          parentEntryId: null,
+        },
+      })
+
+      results.push({
+        id: parentEntry.id,
+        entryDate: parentEntry.entryDate,
+        startTime: parentEntry.startTime,
+        endTime: parentEntry.endTime,
+        durationMinutes: parentEntry.durationMinutes,
+        status: parentEntry.status,
+        isSplit: parentEntry.isSplit,
+      })
+
+      // Create remaining entries with parent reference if any
+      for (let i = 1; i < splitEntries.length; i++) {
+        const splitEntry = splitEntries[i]
+        
+        const childEntry = await tx.timeEntry.create({
           data: {
             userId: session.user.id,
             entryDate: splitEntry.entryDate,
@@ -223,23 +253,22 @@ export async function POST(request: NextRequest) {
             isSplit: splitEntry.isSplit,
             originalStart: splitEntry.originalStart,
             originalEnd: splitEntry.originalEnd,
-            parentEntryId: parentId,
-          },
-          include: {
-            project: true,
-            workplace: true,
+            parentEntryId: parentEntry.id,
           },
         })
 
-        // First entry becomes the parent for subsequent split entries
-        if (parentId === null && splitEntries.length > 1) {
-          parentId = entry.id
-        }
-
-        entries.push(entry)
+        results.push({
+          id: childEntry.id,
+          entryDate: childEntry.entryDate,
+          startTime: childEntry.startTime,
+          endTime: childEntry.endTime,
+          durationMinutes: childEntry.durationMinutes,
+          status: childEntry.status,
+          isSplit: childEntry.isSplit,
+        })
       }
 
-      return entries
+      return results
     })
 
     return NextResponse.json(
