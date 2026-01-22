@@ -196,7 +196,18 @@ export async function POST(request: NextRequest) {
       // Create parent reference ID if split
       let parentId: string | null = null
 
-      const entries = []
+      const entries: Array<{
+        id: string
+        entryDate: Date
+        startTime: Date
+        endTime: Date
+        durationMinutes: number
+        status: string
+        isSplit: boolean
+        project: { id: string; projectCode: string; name: string; color: string | null } | null
+        workplace: { id: string; locationCode: string; name: string } | null
+      }> = []
+      
       for (const splitEntry of splitEntries) {
         const entry = await tx.timeEntry.create({
           data: {
