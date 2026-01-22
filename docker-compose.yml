@@ -44,7 +44,7 @@ services:
       - "3000:3000"
     environment:
       - DATABASE_URL=postgresql://tyotrack:tyotrack_password@postgres:5432/tyotrack?schema=public
-      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_SECRET=8E0jAdY3y1xZ2X7mKbqXbaPLuEFLwfuGlbVIVpPuNZY=
       - NEXTAUTH_URL=https://www.tyotrack.com
       - AUTH_TRUST_HOST=true
       - NODE_ENV=production
