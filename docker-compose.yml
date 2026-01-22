@@ -45,7 +45,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://tyotrack:tyotrack_password@postgres:5432/tyotrack?schema=public
       - AUTH_SECRET=${AUTH_SECRET}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_URL=https://www.tyotrack.com
       - AUTH_TRUST_HOST=true
       - NODE_ENV=production
     depends_on:
