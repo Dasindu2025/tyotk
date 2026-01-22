@@ -1,0 +1,262 @@
+// TyoTrack Enterprise Platform - Prisma Schema
+// Production-grade multi-tenant workforce management
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+enum TimeEntryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum EntityType {
+  EMPLOYEE
+  PROJECT
+  WORKPLACE
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  APPROVE
+  REJECT
+  LOGIN
+  LOGOUT
+}
+
+// ============================================
+// ORGANIZATION & WORKSPACE (Multi-tenancy)
+// ============================================
+
+model Organization {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  workspaces  Workspace[]
+
+  @@index([slug])
+}
+
+model Workspace {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String       @unique
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  users          User[]
+  projects       Project[]
+  workplaces     Workplace[]
+  codeCounters   CodeCounter[]
+  auditLogs      AuditLog[]
+
+  @@index([organizationId])
+  @@index([slug])
+}
+
+// ============================================
+// USER & EMPLOYEE
+// ============================================
+
+model User {
+  id             String          @id @default(cuid())
+  workspaceId    String
+  email          String          @unique
+  passwordHash   String
+  plainPassword  String?         // For admin to view (demo purposes only)
+  role           UserRole        @default(EMPLOYEE)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  profile        EmployeeProfile?
+  timeEntries    TimeEntry[]     @relation("UserEntries")
+  approvedEntries TimeEntry[]    @relation("ApproverEntries")
+  auditLogs      AuditLog[]
+
+  @@index([workspaceId])
+  @@index([email])
+  @@index([role])
+}
+
+model EmployeeProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  employeeCode  String   @unique  // EMP001, EMP002, etc. - IMMUTABLE
+  firstName     String
+  lastName      String
+  phone         String?
+  department    String?
+  position      String?
+  hireDate      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([employeeCode])
+}
+
+// ============================================
+// PROJECT & WORKPLACE
+// ============================================
+
+model Project {
+  id           String      @id @default(cuid())
+  workspaceId  String
+  projectCode  String      @unique  // PRO001, PRO002, etc. - IMMUTABLE
+  name         String
+  description  String?
+  color        String?     @default("#6366F1")
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  workspace    Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  timeEntries  TimeEntry[]
+
+  @@index([workspaceId])
+  @@index([projectCode])
+}
+
+model Workplace {
+  id            String      @id @default(cuid())
+  workspaceId   String
+  locationCode  String      @unique  // LOC001, LOC002, etc. - IMMUTABLE
+  name          String
+  address       String?
+  city          String?
+  country       String?
+  isActive      Boolean     @default(true)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  workspace     Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  timeEntries   TimeEntry[]
+
+  @@index([workspaceId])
+  @@index([locationCode])
+}
+
+// ============================================
+// TIME ENTRY (with cross-day splitting support)
+// ============================================
+
+model TimeEntry {
+  id              String          @id @default(cuid())
+  userId          String
+  projectId       String?
+  workplaceId     String?
+  
+  // Date and time
+  entryDate       DateTime        @db.Date  // The calendar date this entry belongs to
+  startTime       DateTime                   // Actual start datetime
+  endTime         DateTime                   // Actual end datetime
+  durationMinutes Int                        // Calculated duration in minutes
+  
+  // Status and approval
+  status          TimeEntryStatus @default(PENDING)
+  notes           String?
+  rejectionReason String?
+  
+  // Cross-day splitting
+  parentEntryId   String?                    // If this is a split entry, reference to parent
+  isSplit         Boolean         @default(false)  // True if this entry was auto-split
+  originalStart   DateTime?                  // Original start time before split
+  originalEnd     DateTime?                  // Original end time before split
+  
+  // Approval tracking
+  approvedById    String?
+  approvedAt      DateTime?
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  user            User            @relation("UserEntries", fields: [userId], references: [id], onDelete: Cascade)
+  project         Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  workplace       Workplace?      @relation(fields: [workplaceId], references: [id], onDelete: SetNull)
+  approvedBy      User?           @relation("ApproverEntries", fields: [approvedById], references: [id], onDelete: SetNull)
+  
+  // Self-relation for splits
+  parentEntry     TimeEntry?      @relation("EntrySplits", fields: [parentEntryId], references: [id], onDelete: Cascade)
+  childEntries    TimeEntry[]     @relation("EntrySplits")
+
+  @@index([userId])
+  @@index([entryDate])
+  @@index([status])
+  @@index([projectId])
+  @@index([workplaceId])
+  @@index([parentEntryId])
+}
+
+// ============================================
+// CODE COUNTER (for sequential code generation)
+// ============================================
+
+model CodeCounter {
+  id          String     @id @default(cuid())
+  workspaceId String
+  entityType  EntityType
+  lastNumber  Int        @default(0)
+  updatedAt   DateTime   @updatedAt
+
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, entityType])
+  @@index([workspaceId])
+}
+
+// ============================================
+// AUDIT LOG
+// ============================================
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  workspaceId String
+  userId      String?
+  userEmail   String?
+  action      AuditAction
+  entityType  String
+  entityId    String
+  oldValue    Json?
+  newValue    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime    @default(now())
+
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
