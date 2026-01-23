@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
+import { hash } from "bcryptjs"
 
 interface RouteParams {
   params: Promise<{ id: string }>
 }
 
-// GET - Get employee backdateLimit
+// GET - Get employee settings (backdateLimit)
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// PUT - Update employee backdateLimit
+// PUT - Update employee settings (backdateLimit and/or password)
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await auth()
@@ -60,25 +61,53 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
     const body = await request.json()
-    const { backdateLimit } = body
+    const { backdateLimit, newPassword } = body
 
-    // Validate backdateLimit
-    if (typeof backdateLimit !== "number" || backdateLimit < 0 || backdateLimit > 365) {
-      return NextResponse.json(
-        { error: "Backdate limit must be between 0 and 365 days" },
-        { status: 400 }
-      )
+    // Validate backdateLimit if provided
+    if (backdateLimit !== undefined) {
+      if (typeof backdateLimit !== "number" || backdateLimit < 0 || backdateLimit > 365) {
+        return NextResponse.json(
+          { error: "Backdate limit must be between 0 and 365 days" },
+          { status: 400 }
+        )
+      }
     }
 
-    // Update user with raw query to handle pre-regeneration schema
-    await prisma.$executeRaw`
-      UPDATE "User" 
-      SET "backdateLimit" = ${backdateLimit}, 
-          "updatedAt" = NOW()
-      WHERE id = ${id}
-    `
+    // Validate password if provided
+    if (newPassword !== undefined) {
+      if (typeof newPassword !== "string" || newPassword.length < 6) {
+        return NextResponse.json(
+          { error: "Password must be at least 6 characters" },
+          { status: 400 }
+        )
+      }
+    }
 
-    return NextResponse.json({ success: true })
+    // Build update data
+    const updateData: any = {
+      updatedAt: new Date()
+    }
+
+    if (backdateLimit !== undefined) {
+      updateData.backdateLimit = backdateLimit
+    }
+
+    if (newPassword) {
+      const passwordHash = await hash(newPassword, 12)
+      updateData.passwordHash = passwordHash
+      updateData.plainPassword = newPassword  // Store plain password for admin viewing
+    }
+
+    // Update user
+    await prisma.user.update({
+      where: { id },
+      data: updateData
+    })
+
+    return NextResponse.json({ 
+      success: true,
+      message: newPassword ? "Password and settings updated" : "Settings updated"
+    })
   } catch (error) {
     console.error("Error updating employee settings:", error)
     return NextResponse.json(
@@ -87,3 +116,4 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     )
   }
 }
+

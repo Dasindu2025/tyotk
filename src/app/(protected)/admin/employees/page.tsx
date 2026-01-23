@@ -13,6 +13,9 @@ import {
   Copy,
   Eye,
   EyeOff,
+  Settings,
+  Calendar,
+  Save,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -48,6 +51,15 @@ export default function EmployeesPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [showPasswords, setShowPasswords] = useState(false)
+
+  // Settings dialog state
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false)
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
+  const [settingsForm, setSettingsForm] = useState({
+    newPassword: "",
+    backdateLimit: 7
+  })
+  const [savingSettings, setSavingSettings] = useState(false)
 
   // Simplified form state - only required fields
   const [formData, setFormData] = useState({
@@ -119,6 +131,65 @@ export default function EmployeesPage() {
   function copyToClipboard(text: string, label: string) {
     navigator.clipboard.writeText(text)
     toast.success(`${label} copied to clipboard`)
+  }
+
+  async function openSettingsDialog(employee: Employee) {
+    setSelectedEmployee(employee)
+    setSettingsForm({ newPassword: "", backdateLimit: 7 })
+    
+    // Fetch current settings
+    try {
+      const res = await fetch(`/api/employees/${employee.id}/settings`)
+      if (res.ok) {
+        const data = await res.json()
+        setSettingsForm(prev => ({ ...prev, backdateLimit: data.backdateLimit || 7 }))
+      }
+    } catch (error) {
+      console.error("Failed to fetch employee settings:", error)
+    }
+    
+    setSettingsDialogOpen(true)
+  }
+
+  async function handleSaveSettings(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selectedEmployee) return
+
+    setSavingSettings(true)
+    
+    try {
+      const updateData: any = {}
+      
+      // Only include fields that have values
+      if (settingsForm.newPassword.trim()) {
+        updateData.newPassword = settingsForm.newPassword
+      }
+      updateData.backdateLimit = settingsForm.backdateLimit
+
+      const res = await fetch(`/api/employees/${selectedEmployee.id}/settings`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updateData),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to update settings")
+      }
+
+      toast.success(
+        settingsForm.newPassword.trim() 
+          ? "Password and settings updated!" 
+          : "Settings updated!"
+      )
+      setSettingsDialogOpen(false)
+      fetchEmployees()
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setSavingSettings(false)
+    }
   }
 
   return (
@@ -269,6 +340,17 @@ export default function EmployeesPage() {
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Settings Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openSettingsDialog(employee)}
+                      className="gap-2"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Settings
+                    </Button>
                   </div>
                 </motion.div>
               ))}
@@ -349,6 +431,81 @@ export default function EmployeesPage() {
                   </>
                 ) : (
                   "Create Employee"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Settings Dialog */}
+      <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5 text-indigo-400" />
+              Employee Settings
+            </DialogTitle>
+            <DialogDescription>
+              {selectedEmployee && (
+                <span>
+                  Manage settings for <strong>{selectedEmployee.firstName} {selectedEmployee.lastName}</strong> ({selectedEmployee.employeeCode})
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleSaveSettings} className="space-y-4">
+            {/* Change Password */}
+            <div className="space-y-2">
+              <Label htmlFor="newPassword" className="flex items-center gap-2">
+                <Key className="w-4 h-4 text-slate-400" />
+                New Password
+              </Label>
+              <Input
+                id="newPassword"
+                type="text"
+                placeholder="Leave empty to keep current password"
+                value={settingsForm.newPassword}
+                onChange={(e) => setSettingsForm({ ...settingsForm, newPassword: e.target.value })}
+              />
+              <p className="text-xs text-slate-500">Enter a new password (min 6 characters) or leave empty</p>
+            </div>
+
+            {/* Backdate Limit */}
+            <div className="space-y-2">
+              <Label htmlFor="backdateLimit" className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-slate-400" />
+                Backdate Limit (Days)
+              </Label>
+              <Input
+                id="backdateLimit"
+                type="number"
+                min={0}
+                max={365}
+                value={settingsForm.backdateLimit}
+                onChange={(e) => setSettingsForm({ ...settingsForm, backdateLimit: parseInt(e.target.value) || 0 })}
+              />
+              <p className="text-xs text-slate-500">
+                How many days back can this employee create time entries (0-365)
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setSettingsDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={savingSettings}>
+                {savingSettings ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Changes
+                  </>
                 )}
               </Button>
             </DialogFooter>
