@@ -50,8 +50,12 @@ export async function GET(request: NextRequest) {
       if (userId) {
         where.userId = userId
       }
-      // Scope to workspace
-      where.user = { workspaceId: session.user.workspaceId }
+      // Scope to workspace - use proper Prisma relation filter syntax
+      where.user = {
+        is: {
+          workspaceId: session.user.workspaceId
+        }
+      }
     }
 
     if (startDate) {
