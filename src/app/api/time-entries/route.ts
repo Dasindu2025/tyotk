@@ -49,15 +49,29 @@ export async function GET(request: NextRequest) {
       // Admins can filter by user or see all workspace entries
       if (userId) {
         where.userId = userId
-      }
-      // Scope to workspace
-      where.user = {
-        workspaceId: session.user.workspaceId
+      } else {
+        // Get all user IDs in the workspace first
+        const workspaceUsers = await prisma.user.findMany({
+          where: { workspaceId: session.user.workspaceId },
+          select: { id: true }
+        })
+        const workspaceUserIds = workspaceUsers.map(u => u.id)
+        
+        console.log("[TimeEntries API] Workspace users:", workspaceUserIds.length)
+        
+        if (workspaceUserIds.length > 0) {
+          where.userId = { in: workspaceUserIds }
+        } else {
+          // No users in workspace, return empty
+          return NextResponse.json({
+            data: [],
+            pagination: { page, limit, total: 0, totalPages: 0 }
+          })
+        }
       }
     }
 
     console.log("[TimeEntries API] Query params:", { startDate, endDate, status, projectId, userId })
-    console.log("[TimeEntries API] Where clause:", JSON.stringify(where, null, 2))
     console.log("[TimeEntries API] Session workspace:", session.user.workspaceId)
 
     if (startDate) {
