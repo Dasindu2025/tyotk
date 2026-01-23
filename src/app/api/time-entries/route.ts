@@ -50,13 +50,15 @@ export async function GET(request: NextRequest) {
       if (userId) {
         where.userId = userId
       }
-      // Scope to workspace - use proper Prisma relation filter syntax
+      // Scope to workspace
       where.user = {
-        is: {
-          workspaceId: session.user.workspaceId
-        }
+        workspaceId: session.user.workspaceId
       }
     }
+
+    console.log("[TimeEntries API] Query params:", { startDate, endDate, status, projectId, userId })
+    console.log("[TimeEntries API] Where clause:", JSON.stringify(where, null, 2))
+    console.log("[TimeEntries API] Session workspace:", session.user.workspaceId)
 
     if (startDate) {
       where.entryDate = { gte: startOfDay(parseISO(startDate)) }
