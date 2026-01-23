@@ -141,6 +141,10 @@ export function TimeEntryDialog({ open, onOpenChange, onSuccess, selectedDate }:
           projectId: data.projectId || undefined,
           workplaceId: data.workplaceId || undefined,
           notes: data.notes || undefined,
+          // Send explicit entry dates for timezone-aware splitting
+          entryDate: data.date, // e.g., "2026-01-19"
+          crossesMidnight: crossesMidnight,
+          timezoneOffset: new Date().getTimezoneOffset(), // minutes offset from UTC (e.g., -330 for IST)
         }),
       })
 

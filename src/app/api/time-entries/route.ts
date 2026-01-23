@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { z } from "zod"
-import { splitTimeEntry, validateTimeEntry, type SplitTimeEntry } from "@/lib/services/time-entry"
-import { startOfDay, endOfDay, parseISO, format } from "date-fns"
+import { validateTimeEntry, type SplitTimeEntry } from "@/lib/services/time-entry"
+import { startOfDay, endOfDay, parseISO, format, addDays } from "date-fns"
 
 // Validation schemas
 const createTimeEntrySchema = z.object({
@@ -12,6 +12,10 @@ const createTimeEntrySchema = z.object({
   projectId: z.string().optional(),
   workplaceId: z.string().optional(),
   notes: z.string().optional(),
+  // Timezone-aware splitting fields
+  entryDate: z.string().optional(), // YYYY-MM-DD format
+  crossesMidnight: z.boolean().optional(),
+  timezoneOffset: z.number().optional(), // minutes offset from UTC
 })
 
 const querySchema = z.object({
@@ -186,7 +190,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { startTime, endTime, projectId, workplaceId, notes } = validation.data
+    const { startTime, endTime, projectId, workplaceId, notes, entryDate, crossesMidnight } = validation.data
     const startDate = new Date(startTime)
     const endDate = new Date(endTime)
 
@@ -224,27 +228,100 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Split the entry if it crosses midnight
-    console.log("[TimeEntry POST] Input times:", {
+    // TIMEZONE-AWARE SPLITTING
+    // Use explicit entryDate and crossesMidnight from frontend instead of UTC date comparison
+    console.log("[TimeEntry POST] Input:", {
       startTime: startDate.toISOString(),
       endTime: endDate.toISOString(),
-      startDateString: startDate.toString(),
-      endDateString: endDate.toString(),
+      entryDate,
+      crossesMidnight,
     })
     
-    const splitEntries: SplitTimeEntry[] = splitTimeEntry({
-      startTime: startDate,
-      endTime: endDate,
-      userId: session.user.id,
-      projectId,
-      workplaceId,
-      notes,
-    })
+    const splitEntries: SplitTimeEntry[] = []
+    const totalMinutes = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60))
+    
+    if (crossesMidnight && entryDate) {
+      // Entry crosses midnight - split into two entries based on user's local dates
+      const firstDate = parseISO(entryDate) // User's selected date (e.g., 2026-01-19)
+      const secondDate = addDays(firstDate, 1) // Next day (e.g., 2026-01-20)
+      
+      // Calculate midnight in UTC based on user's local date
+      // The startTime is already in UTC, we need to find when midnight occurs
+      // For the split, we use the entryDate as the anchor
+      
+      // Entry 1: From start time until midnight (on entryDate)
+      // Entry 2: From midnight until end time (on next day)
+      
+      // Calculate durations based on the times
+      // startTime is in UTC, endTime is in UTC
+      // We know: startTime is on entryDate (local), endTime is on entryDate+1 (local)
+      
+      // Find midnight between them (this is the next day at 00:00 local time)
+      // Since we have startDate and endDate in UTC, and we know entry crosses midnight,
+      // we can calculate the split point
+      
+      // Simplified: Use the timestamps directly
+      // Entry 1 ends at the start of the second date (midnight local)
+      // We can construct midnight by using the secondDate at 00:00 local
+      // Since secondDate is parsed from entryDate+1, it's at 00:00 UTC of that day
+      
+      // Calculate midnight timestamp (when entry 1 ends and entry 2 starts)
+      // secondDate is already at 00:00:00 of the next day
+      const midnightUTC = secondDate.getTime()
+      
+      // First entry: from startDate to midnight
+      const firstDuration = Math.round((midnightUTC - startDate.getTime()) / (1000 * 60))
+      // Second entry: from midnight to endDate  
+      const secondDuration = Math.round((endDate.getTime() - midnightUTC) / (1000 * 60))
+      
+      console.log("[TimeEntry POST] Split calculation:", {
+        firstDate: format(firstDate, "yyyy-MM-dd"),
+        secondDate: format(secondDate, "yyyy-MM-dd"),
+        midnightUTC: new Date(midnightUTC).toISOString(),
+        firstDuration,
+        secondDuration,
+        totalMinutes,
+      })
+      
+      if (firstDuration > 0) {
+        splitEntries.push({
+          entryDate: firstDate,
+          startTime: startDate,
+          endTime: new Date(midnightUTC),
+          durationMinutes: firstDuration,
+          isSplit: true,
+          originalStart: startDate,
+          originalEnd: endDate,
+        })
+      }
+      
+      if (secondDuration > 0) {
+        splitEntries.push({
+          entryDate: secondDate,
+          startTime: new Date(midnightUTC),
+          endTime: endDate,
+          durationMinutes: secondDuration,
+          isSplit: true,
+          originalStart: startDate,
+          originalEnd: endDate,
+        })
+      }
+    } else {
+      // Same day entry - no split needed
+      const parsedEntryDate = entryDate ? parseISO(entryDate) : startOfDay(startDate)
+      splitEntries.push({
+        entryDate: parsedEntryDate,
+        startTime: startDate,
+        endTime: endDate,
+        durationMinutes: totalMinutes,
+        isSplit: false,
+      })
+    }
     
     console.log("[TimeEntry POST] Split result:", {
       numberOfEntries: splitEntries.length,
       entries: splitEntries.map(e => ({
-        entryDate: e.entryDate.toISOString(),
+        entryDate: format(e.entryDate, "yyyy-MM-dd"),
         startTime: e.startTime.toISOString(),
         endTime: e.endTime.toISOString(),
         durationMinutes: e.durationMinutes,
