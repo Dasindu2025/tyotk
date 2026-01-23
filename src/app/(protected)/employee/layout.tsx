@@ -10,6 +10,7 @@ import {
   BarChart3,
   LogOut,
   User,
+  Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -17,6 +18,7 @@ import { Button } from "@/components/ui/button"
 const navigation = [
   { name: "Calendar", href: "/employee", icon: Calendar },
   { name: "Reports", href: "/employee/reports", icon: BarChart3 },
+  { name: "Settings", href: "/employee/settings", icon: Settings },
 ]
 
 export default function EmployeeLayout({
