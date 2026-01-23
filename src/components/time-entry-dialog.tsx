@@ -219,20 +219,19 @@ export function TimeEntryDialog({ open, onOpenChange, onSuccess, selectedDate }:
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="projectId">Project <span className="text-red-400">*</span></Label>
+            <Label htmlFor="projectId">Project (optional)</Label>
             <select
               id="projectId"
-              {...register("projectId", { required: "Project is required" })}
+              {...register("projectId")}
               className="flex h-10 w-full rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2 text-sm text-slate-100"
             >
-              <option value="">Select a project</option>
+              <option value="">No project</option>
               {projects.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.projectCode} - {p.name}
                 </option>
               ))}
             </select>
-            {errors.projectId && <p className="text-xs text-red-400">{errors.projectId.message}</p>}
           </div>
 
           <div className="space-y-2">

@@ -9,7 +9,7 @@ import { startOfDay, endOfDay, parseISO, format, addDays } from "date-fns"
 const createTimeEntrySchema = z.object({
   startTime: z.string().datetime(),
   endTime: z.string().datetime(),
-  projectId: z.string().min(1, "Project is required"),
+  projectId: z.string().optional(),
   workplaceId: z.string().min(1, "Workplace is required"),
   notes: z.string().optional(),
   // Timezone-aware splitting fields
