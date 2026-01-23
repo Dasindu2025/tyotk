@@ -225,6 +225,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Split the entry if it crosses midnight
+    console.log("[TimeEntry POST] Input times:", {
+      startTime: startDate.toISOString(),
+      endTime: endDate.toISOString(),
+      startDateString: startDate.toString(),
+      endDateString: endDate.toString(),
+    })
+    
     const splitEntries: SplitTimeEntry[] = splitTimeEntry({
       startTime: startDate,
       endTime: endDate,
@@ -232,6 +239,17 @@ export async function POST(request: NextRequest) {
       projectId,
       workplaceId,
       notes,
+    })
+    
+    console.log("[TimeEntry POST] Split result:", {
+      numberOfEntries: splitEntries.length,
+      entries: splitEntries.map(e => ({
+        entryDate: e.entryDate.toISOString(),
+        startTime: e.startTime.toISOString(),
+        endTime: e.endTime.toISOString(),
+        durationMinutes: e.durationMinutes,
+        isSplit: e.isSplit,
+      }))
     })
 
     // Create all entries in a transaction
