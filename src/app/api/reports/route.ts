@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       return {
         id: entry.id,
         date: format(new Date(entry.entryDate), "yyyy-MM-dd"),
-        entryDate: entry.entryDate,
+        entryDate: format(new Date(entry.entryDate), "yyyy-MM-dd"),
         startTime: entry.startTime,
         endTime: entry.endTime,
         timeIn: format(new Date(entry.startTime), "HH:mm"),

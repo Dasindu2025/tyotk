@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { z } from "zod"
+import { format } from "date-fns"
 
 // Validation schemas
 const approvalActionSchema = z.object({
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     const data = entries.map((entry) => ({
       id: entry.id,
-      entryDate: entry.entryDate,
+      entryDate: format(entry.entryDate, "yyyy-MM-dd"),
       startTime: entry.startTime,
       endTime: entry.endTime,
       durationMinutes: entry.durationMinutes,

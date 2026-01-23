@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
 import { z } from "zod"
 import { splitTimeEntry, validateTimeEntry, type SplitTimeEntry } from "@/lib/services/time-entry"
-import { startOfDay, endOfDay, parseISO } from "date-fns"
+import { startOfDay, endOfDay, parseISO, format } from "date-fns"
 
 // Validation schemas
 const createTimeEntrySchema = z.object({
@@ -108,9 +108,12 @@ export async function GET(request: NextRequest) {
     ])
 
     // Transform for response
+    // IMPORTANT: Format entryDate as YYYY-MM-DD string to prevent timezone conversion issues
+    // When entryDate (stored as @db.Date) is serialized as ISO timestamp (e.g., 2024-01-23T00:00:00.000Z),
+    // clients in different timezones may interpret it as a different calendar date
     const data = entries.map((entry) => ({
       id: entry.id,
-      entryDate: entry.entryDate,
+      entryDate: format(entry.entryDate, "yyyy-MM-dd"),
       startTime: entry.startTime,
       endTime: entry.endTime,
       durationMinutes: entry.durationMinutes,
@@ -318,7 +321,7 @@ export async function POST(request: NextRequest) {
           : "Time entry created",
         entries: createdEntries.map((e) => ({
           id: e.id,
-          entryDate: e.entryDate,
+          entryDate: format(e.entryDate, "yyyy-MM-dd"),
           startTime: e.startTime,
           endTime: e.endTime,
           durationMinutes: e.durationMinutes,
