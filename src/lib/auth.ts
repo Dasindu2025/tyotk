@@ -40,44 +40,57 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email and password are required")
-        }
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            console.log("[Auth] Missing credentials")
+            return null
+          }
 
-        const email = credentials.email as string
-        const password = credentials.password as string
+          const email = credentials.email as string
+          const password = credentials.password as string
 
-        const user = await prisma.user.findUnique({
-          where: { email },
-          include: {
-            workspace: true,
-            profile: true,
-          },
-        })
+          console.log("[Auth] Attempting to find user:", email)
 
-        if (!user) {
-          throw new Error("Invalid email or password")
-        }
+          const user = await prisma.user.findUnique({
+            where: { email },
+            include: {
+              workspace: true,
+              profile: true,
+            },
+          })
 
-        if (!user.isActive) {
-          throw new Error("Account is deactivated")
-        }
+          if (!user) {
+            console.log("[Auth] User not found:", email)
+            return null
+          }
 
-        const isPasswordValid = await compare(password, user.passwordHash)
+          if (!user.isActive) {
+            console.log("[Auth] User deactivated:", email)
+            return null
+          }
 
-        if (!isPasswordValid) {
-          throw new Error("Invalid email or password")
-        }
+          const isPasswordValid = await compare(password, user.passwordHash)
 
-        return {
-          id: user.id,
-          email: user.email,
-          role: user.role,
-          workspaceId: user.workspaceId,
-          workspaceName: user.workspace.name,
-          firstName: user.profile?.firstName ?? "",
-          lastName: user.profile?.lastName ?? "",
-          employeeCode: user.profile?.employeeCode,
+          if (!isPasswordValid) {
+            console.log("[Auth] Invalid password for:", email)
+            return null
+          }
+
+          console.log("[Auth] Login successful for:", email)
+
+          return {
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            workspaceId: user.workspaceId,
+            workspaceName: user.workspace.name,
+            firstName: user.profile?.firstName ?? "",
+            lastName: user.profile?.lastName ?? "",
+            employeeCode: user.profile?.employeeCode,
+          }
+        } catch (error) {
+          console.error("[Auth] Error during authentication:", error)
+          return null
         }
       },
     }),
