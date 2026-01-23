@@ -216,10 +216,23 @@ export async function POST(request: NextRequest) {
     
     const backdateLimit = (user as { backdateLimit?: number } | null)?.backdateLimit ?? 7
     
+    console.log("[TimeEntry POST] Backdate check:", {
+      userId: session.user.id,
+      userBackdateLimitFromDB: (user as { backdateLimit?: number } | null)?.backdateLimit,
+      backdateLimitUsed: backdateLimit,
+    })
+    
     // Check if entry date is within allowed backdate range
     const today = startOfDay(new Date())
     const entryDay = startOfDay(startDate)
     const daysDiff = Math.floor((today.getTime() - entryDay.getTime()) / (1000 * 60 * 60 * 24))
+    
+    console.log("[TimeEntry POST] Date comparison:", {
+      today: today.toISOString(),
+      entryDay: entryDay.toISOString(),
+      daysDiff,
+      allowed: daysDiff <= backdateLimit,
+    })
     
     if (daysDiff > backdateLimit) {
       return NextResponse.json(
