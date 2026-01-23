@@ -66,6 +66,8 @@ model Workspace {
   name           String
   slug           String       @unique
   isActive       Boolean      @default(true)
+  dayStartHour   Int          @default(6)   // Day shift starts at 6:00 AM
+  dayEndHour     Int          @default(18)  // Day shift ends at 6:00 PM (night starts)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -92,6 +94,7 @@ model User {
   plainPassword  String?         // For admin to view (demo purposes only)
   role           UserRole        @default(EMPLOYEE)
   isActive       Boolean         @default(true)
+  backdateLimit  Int             @default(7)  // Days allowed to create entries in past
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 

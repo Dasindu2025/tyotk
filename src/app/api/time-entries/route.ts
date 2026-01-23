@@ -181,6 +181,26 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get user's backdate limit
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { backdateLimit: true },
+    })
+    
+    const backdateLimit = (user as { backdateLimit?: number } | null)?.backdateLimit ?? 7
+    
+    // Check if entry date is within allowed backdate range
+    const today = startOfDay(new Date())
+    const entryDay = startOfDay(startDate)
+    const daysDiff = Math.floor((today.getTime() - entryDay.getTime()) / (1000 * 60 * 60 * 24))
+    
+    if (daysDiff > backdateLimit) {
+      return NextResponse.json(
+        { error: `Cannot create entries more than ${backdateLimit} days in the past` },
+        { status: 400 }
+      )
+    }
+
     // Split the entry if it crosses midnight
     const splitEntries: SplitTimeEntry[] = splitTimeEntry({
       startTime: startDate,

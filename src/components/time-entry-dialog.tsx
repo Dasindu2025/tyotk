@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
-import { format } from "date-fns"
+import { format, startOfDay, isAfter } from "date-fns"
 import { Loader2, Clock, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -21,6 +21,7 @@ interface TimeEntryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  selectedDate?: Date | null  // New prop for pre-selected date
 }
 
 interface FormData {
@@ -44,13 +45,13 @@ interface Workplace {
   locationCode: string
 }
 
-export function TimeEntryDialog({ open, onOpenChange, onSuccess }: TimeEntryDialogProps) {
+export function TimeEntryDialog({ open, onOpenChange, onSuccess, selectedDate }: TimeEntryDialogProps) {
   const [loading, setLoading] = useState(false)
   const [projects, setProjects] = useState<Project[]>([])
   const [workplaces, setWorkplaces] = useState<Workplace[]>([])
   const [crossesMidnight, setCrossesMidnight] = useState(false)
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       date: format(new Date(), "yyyy-MM-dd"),
       startTime: "09:00",
@@ -64,6 +65,23 @@ export function TimeEntryDialog({ open, onOpenChange, onSuccess }: TimeEntryDial
   const startTime = watch("startTime")
   const endTime = watch("endTime")
   const date = watch("date")
+
+  // Set date when selectedDate prop changes
+  useEffect(() => {
+    if (selectedDate && open) {
+      // Don't allow future dates
+      const today = startOfDay(new Date())
+      const selected = startOfDay(selectedDate)
+      
+      if (isAfter(selected, today)) {
+        // If future date, use today instead
+        setValue("date", format(today, "yyyy-MM-dd"))
+        toast.error("Cannot create time entries for future dates")
+      } else {
+        setValue("date", format(selectedDate, "yyyy-MM-dd"))
+      }
+    }
+  }, [selectedDate, open, setValue])
 
   // Check if entry crosses midnight
   useEffect(() => {
@@ -90,6 +108,15 @@ export function TimeEntryDialog({ open, onOpenChange, onSuccess }: TimeEntryDial
   }, [open])
 
   async function onSubmit(data: FormData) {
+    // Validate: no future dates
+    const selectedDateObj = new Date(data.date)
+    const today = startOfDay(new Date())
+    
+    if (isAfter(startOfDay(selectedDateObj), today)) {
+      toast.error("Cannot create time entries for future dates")
+      return
+    }
+
     setLoading(true)
     try {
       // Construct datetime strings
@@ -133,6 +160,9 @@ export function TimeEntryDialog({ open, onOpenChange, onSuccess }: TimeEntryDial
     }
   }
 
+  // Calculate max date (today)
+  const maxDate = format(new Date(), "yyyy-MM-dd")
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -152,8 +182,10 @@ export function TimeEntryDialog({ open, onOpenChange, onSuccess }: TimeEntryDial
             <Input
               id="date"
               type="date"
+              max={maxDate}
               {...register("date", { required: "Date is required" })}
             />
+            <p className="text-xs text-slate-500">Cannot select future dates</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

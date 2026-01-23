@@ -1,19 +1,83 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
-import { motion } from "framer-motion"
 import {
   Settings,
   User,
   Building,
   Shield,
   Clock,
+  Sun,
+  Moon,
+  Save,
+  Loader2,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
+
+interface WorkspaceSettings {
+  dayStartHour: number
+  dayEndHour: number
+}
 
 export default function AdminSettingsPage() {
   const { data: session } = useSession()
+  const [loading, setLoading] = useState(false)
+  const [settings, setSettings] = useState<WorkspaceSettings>({
+    dayStartHour: 6,
+    dayEndHour: 18,
+  })
+
+  useEffect(() => {
+    fetchSettings()
+  }, [])
+
+  async function fetchSettings() {
+    try {
+      const res = await fetch("/api/workspaces/settings")
+      if (res.ok) {
+        const data = await res.json()
+        setSettings({
+          dayStartHour: data.dayStartHour ?? 6,
+          dayEndHour: data.dayEndHour ?? 18,
+        })
+      }
+    } catch (error) {
+      console.error("Failed to fetch settings:", error)
+    }
+  }
+
+  async function saveSettings() {
+    setLoading(true)
+    try {
+      const res = await fetch("/api/workspaces/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      })
+      if (res.ok) {
+        toast.success("Settings saved successfully")
+      } else {
+        toast.error("Failed to save settings")
+      }
+    } catch (error) {
+      toast.error("Failed to save settings")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatHour = (hour: number) => {
+    if (hour === 0) return "12:00 AM"
+    if (hour === 12) return "12:00 PM"
+    if (hour < 12) return `${hour}:00 AM`
+    return `${hour - 12}:00 PM`
+  }
 
   return (
     <div className="space-y-6">
@@ -65,6 +129,89 @@ export default function AdminSettingsPage() {
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Day/Night Hours Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sun className="w-5 h-5 text-amber-400" />
+            <Moon className="w-5 h-5 text-blue-400" />
+            Day/Night Hours Configuration
+          </CardTitle>
+          <CardDescription>
+            Configure when day shift starts and ends for hour tracking. 
+            Night hours are calculated outside day shift hours.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="dayStartHour" className="flex items-center gap-2">
+                <Sun className="w-4 h-4 text-amber-400" />
+                Day Shift Starts At
+              </Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="dayStartHour"
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={settings.dayStartHour}
+                  onChange={(e) => setSettings(s => ({...s, dayStartHour: parseInt(e.target.value) || 0}))}
+                  className="w-24"
+                />
+                <span className="text-slate-400">{formatHour(settings.dayStartHour)}</span>
+              </div>
+              <p className="text-xs text-slate-500">Hour (0-23, 24-hour format)</p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="dayEndHour" className="flex items-center gap-2">
+                <Moon className="w-4 h-4 text-blue-400" />
+                Day Shift Ends At (Night Starts)
+              </Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="dayEndHour"
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={settings.dayEndHour}
+                  onChange={(e) => setSettings(s => ({...s, dayEndHour: parseInt(e.target.value) || 0}))}
+                  className="w-24"
+                />
+                <span className="text-slate-400">{formatHour(settings.dayEndHour)}</span>
+              </div>
+              <p className="text-xs text-slate-500">Hour (0-23, 24-hour format)</p>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 rounded-lg bg-slate-800/30 border border-slate-700/50">
+            <p className="text-sm text-slate-300">
+              <strong>Current Configuration:</strong>
+            </p>
+            <p className="text-slate-400 mt-1">
+              ☀️ Day Hours: {formatHour(settings.dayStartHour)} - {formatHour(settings.dayEndHour)}
+            </p>
+            <p className="text-slate-400">
+              🌙 Night Hours: {formatHour(settings.dayEndHour)} - {formatHour(settings.dayStartHour)} (next day)
+            </p>
+          </div>
+
+          <Button className="mt-4" onClick={saveSettings} disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Settings
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
 

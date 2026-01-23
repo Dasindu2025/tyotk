@@ -8,11 +8,11 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
   Calendar,
   CheckCircle2,
-  XCircle,
   AlertCircle,
+  Sun,
+  Moon,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -35,9 +35,14 @@ interface TimeEntry {
 export default function EmployeeDashboardPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [entries, setEntries] = useState<TimeEntry[]>([])
-  const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [weeklyStats, setWeeklyStats] = useState({
+    weekHours: 0,
+    monthHours: 0,
+    dayHours: 0,
+    nightHours: 0,
+  })
 
   const monthStart = startOfMonth(currentMonth)
   const monthEnd = endOfMonth(currentMonth)
@@ -49,10 +54,11 @@ export default function EmployeeDashboardPage() {
 
   useEffect(() => {
     fetchEntries()
+    fetchStats()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentMonth])
 
   async function fetchEntries() {
-    setLoading(true)
     try {
       const start = format(monthStart, "yyyy-MM-dd")
       const end = format(monthEnd, "yyyy-MM-dd")
@@ -61,8 +67,21 @@ export default function EmployeeDashboardPage() {
       setEntries(data.data || [])
     } catch (error) {
       console.error("Failed to fetch entries:", error)
-    } finally {
-      setLoading(false)
+    }
+  }
+
+  async function fetchStats() {
+    try {
+      const res = await fetch("/api/stats")
+      const data = await res.json()
+      setWeeklyStats({
+        weekHours: data.weekHours || 0,
+        monthHours: data.monthHours || 0,
+        dayHours: data.dayHours || 0,
+        nightHours: data.nightHours || 0,
+      })
+    } catch (error) {
+      console.error("Failed to fetch stats:", error)
     }
   }
 
@@ -115,8 +134,8 @@ export default function EmployeeDashboardPage() {
               <div className="flex items-center gap-3">
                 <Clock className="w-8 h-8 text-indigo-400" />
                 <div>
-                  <p className="text-2xl font-bold text-white">{stats.totalHours}h</p>
-                  <p className="text-xs text-slate-500">This month</p>
+                  <p className="text-2xl font-bold text-white">{weeklyStats.weekHours}h</p>
+                  <p className="text-xs text-slate-500">This week</p>
                 </div>
               </div>
             </CardContent>
@@ -126,8 +145,8 @@ export default function EmployeeDashboardPage() {
               <div className="flex items-center gap-3">
                 <Calendar className="w-8 h-8 text-purple-400" />
                 <div>
-                  <p className="text-2xl font-bold text-white">{stats.daysWorked}</p>
-                  <p className="text-xs text-slate-500">Days worked</p>
+                  <p className="text-2xl font-bold text-white">{weeklyStats.monthHours}h</p>
+                  <p className="text-xs text-slate-500">This month</p>
                 </div>
               </div>
             </CardContent>
@@ -135,10 +154,10 @@ export default function EmployeeDashboardPage() {
           <Card className="bg-slate-900/50">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                <Sun className="w-8 h-8 text-amber-400" />
                 <div>
-                  <p className="text-2xl font-bold text-white">{stats.approved}</p>
-                  <p className="text-xs text-slate-500">Approved</p>
+                  <p className="text-2xl font-bold text-white">{weeklyStats.dayHours}h</p>
+                  <p className="text-xs text-slate-500">Day hours</p>
                 </div>
               </div>
             </CardContent>
@@ -146,11 +165,42 @@ export default function EmployeeDashboardPage() {
           <Card className="bg-slate-900/50">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <AlertCircle className="w-8 h-8 text-amber-400" />
+                <Moon className="w-8 h-8 text-blue-400" />
                 <div>
-                  <p className="text-2xl font-bold text-white">{stats.pending}</p>
-                  <p className="text-xs text-slate-500">Pending</p>
+                  <p className="text-2xl font-bold text-white">{weeklyStats.nightHours}h</p>
+                  <p className="text-xs text-slate-500">Night hours</p>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Secondary Stats - Approval Status */}
+        <div className="grid grid-cols-3 gap-4">
+          <Card className="bg-slate-900/30">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                <span className="text-slate-400 text-sm">Approved:</span>
+                <span className="text-white font-medium">{stats.approved}</span>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-900/30">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-400" />
+                <span className="text-slate-400 text-sm">Pending:</span>
+                <span className="text-white font-medium">{stats.pending}</span>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="bg-slate-900/30">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-purple-400" />
+                <span className="text-slate-400 text-sm">Days worked:</span>
+                <span className="text-white font-medium">{stats.daysWorked}</span>
               </div>
             </CardContent>
           </Card>
@@ -207,7 +257,10 @@ export default function EmployeeDashboardPage() {
                       key={day.toISOString()}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => setSelectedDate(day)}
+                      onClick={() => {
+                        setSelectedDate(day)
+                        setDialogOpen(true)
+                      }}
                       className={cn(
                         "aspect-square rounded-lg border transition-all flex flex-col items-center justify-center gap-0.5 text-sm",
                         isToday(day) && "ring-2 ring-indigo-500",
@@ -325,6 +378,7 @@ export default function EmployeeDashboardPage() {
       <TimeEntryDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        selectedDate={selectedDate}
         onSuccess={() => {
           setDialogOpen(false)
           fetchEntries()
