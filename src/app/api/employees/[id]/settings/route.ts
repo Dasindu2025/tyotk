@@ -98,11 +98,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       updateData.plainPassword = newPassword  // Store plain password for admin viewing
     }
 
+    console.log("[Employee Settings] Updating user:", id, "with data:", updateData)
+
     // Update user
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id },
       data: updateData
     })
+    
+    console.log("[Employee Settings] Updated user backdateLimit:", (updatedUser as { backdateLimit?: number }).backdateLimit)
 
     return NextResponse.json({ 
       success: true,
