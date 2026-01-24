@@ -241,6 +241,45 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Check for overlapping time entries
+    // Get start and end of the day for the entry
+    const entryDayStart = startOfDay(startDate)
+    const entryDayEnd = new Date(entryDayStart)
+    entryDayEnd.setDate(entryDayEnd.getDate() + 2) // Check current and next day to handle cross-midnight
+
+    // Query existing entries for this user on the same day(s)
+    const existingEntries = await prisma.timeEntry.findMany({
+      where: {
+        userId: session.user.id,
+        entryDate: {
+          gte: entryDayStart,
+          lt: entryDayEnd,
+        },
+      },
+      select: {
+        id: true,
+        startTime: true,
+        endTime: true,
+        entryDate: true,
+      },
+    })
+
+    // Check for overlaps
+    for (const existing of existingEntries) {
+      const existingStart = new Date(existing.startTime)
+      const existingEnd = new Date(existing.endTime)
+      
+      // Check if times overlap (new start < existing end) AND (new end > existing start)
+      if (startDate < existingEnd && endDate > existingStart) {
+        const existingStartStr = format(existingStart, "HH:mm")
+        const existingEndStr = format(existingEnd, "HH:mm")
+        return NextResponse.json(
+          { error: `Time entry overlaps with existing entry (${existingStartStr} - ${existingEndStr})` },
+          { status: 400 }
+        )
+      }
+    }
+
     // TIMEZONE-AWARE SPLITTING
     // Use explicit entryDate and crossesMidnight from frontend instead of UTC date comparison
     console.log("[TimeEntry POST] Input:", {
