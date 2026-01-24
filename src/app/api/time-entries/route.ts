@@ -208,13 +208,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get user's backdate limit
+    // Get user's backdate limit and auto-approve setting
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { backdateLimit: true },
+      select: { backdateLimit: true, autoApprove: true },
     })
     
     const backdateLimit = (user as { backdateLimit?: number } | null)?.backdateLimit ?? 7
+    const autoApprove = (user as { autoApprove?: boolean } | null)?.autoApprove ?? false
     
     console.log("[TimeEntry POST] Backdate check:", {
       userId: session.user.id,
@@ -404,7 +405,7 @@ export async function POST(request: NextRequest) {
           startTime: firstEntry.startTime,
           endTime: firstEntry.endTime,
           durationMinutes: firstEntry.durationMinutes,
-          status: "PENDING",
+          status: autoApprove ? "APPROVED" : "PENDING",
           notes,
           projectId,
           workplaceId,
@@ -436,7 +437,7 @@ export async function POST(request: NextRequest) {
             startTime: splitEntry.startTime,
             endTime: splitEntry.endTime,
             durationMinutes: splitEntry.durationMinutes,
-            status: "PENDING",
+            status: autoApprove ? "APPROVED" : "PENDING",
             notes,
             projectId,
             workplaceId,

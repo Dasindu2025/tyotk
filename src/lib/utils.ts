@@ -30,7 +30,7 @@ export function formatDuration(minutes: number): string {
 }
 
 export function formatMinutesToHours(minutes: number): string {
-  const hours = (minutes / 60).toFixed(1)
+  const hours = (minutes / 60).toFixed(2)
   return `${hours}h`
 }
 

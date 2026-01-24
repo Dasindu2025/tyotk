@@ -96,6 +96,7 @@ model User {
   role           UserRole        @default(EMPLOYEE)
   isActive       Boolean         @default(true)
   backdateLimit  Int             @default(7)  // Days allowed to create entries in past
+  autoApprove    Boolean         @default(false)  // Auto-approve time entries for this employee
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 

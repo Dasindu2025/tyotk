@@ -24,6 +24,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         id: true,
         email: true,
         backdateLimit: true,
+        autoApprove: true,
+        isActive: true,
       },
     })
 
@@ -35,6 +37,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       id: user.id,
       email: user.email,
       backdateLimit: (user as { backdateLimit?: number }).backdateLimit ?? 7,
+      autoApprove: (user as { autoApprove?: boolean }).autoApprove ?? false,
+      isActive: user.isActive,
     })
   } catch (error) {
     console.error("Error fetching employee settings:", error)
@@ -61,7 +65,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     const { id } = await params
     const body = await request.json()
-    const { backdateLimit, newPassword } = body
+    const { backdateLimit, newPassword, autoApprove, isActive } = body
 
     // Validate backdateLimit if provided
     if (backdateLimit !== undefined) {
@@ -96,6 +100,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       const passwordHash = await hash(newPassword, 12)
       updateData.passwordHash = passwordHash
       updateData.plainPassword = newPassword  // Store plain password for admin viewing
+    }
+
+    if (autoApprove !== undefined) {
+      updateData.autoApprove = autoApprove
+    }
+
+    if (isActive !== undefined) {
+      updateData.isActive = isActive
     }
 
     console.log("[Employee Settings] Updating user:", id, "with data:", updateData)

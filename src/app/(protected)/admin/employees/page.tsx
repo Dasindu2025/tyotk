@@ -16,6 +16,8 @@ import {
   Settings,
   Calendar,
   Save,
+  CheckCircle,
+  XCircle,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -57,7 +59,9 @@ export default function EmployeesPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null)
   const [settingsForm, setSettingsForm] = useState({
     newPassword: "",
-    backdateLimit: 7
+    backdateLimit: 7,
+    autoApprove: false,
+    isActive: true,
   })
   const [savingSettings, setSavingSettings] = useState(false)
 
@@ -135,14 +139,19 @@ export default function EmployeesPage() {
 
   async function openSettingsDialog(employee: Employee) {
     setSelectedEmployee(employee)
-    setSettingsForm({ newPassword: "", backdateLimit: 7 })
+    setSettingsForm({ newPassword: "", backdateLimit: 7, autoApprove: false, isActive: employee.isActive })
     
     // Fetch current settings
     try {
       const res = await fetch(`/api/employees/${employee.id}/settings`)
       if (res.ok) {
         const data = await res.json()
-        setSettingsForm(prev => ({ ...prev, backdateLimit: data.backdateLimit || 7 }))
+        setSettingsForm(prev => ({ 
+          ...prev, 
+          backdateLimit: data.backdateLimit || 7,
+          autoApprove: data.autoApprove || false,
+          isActive: data.isActive ?? true,
+        }))
       }
     } catch (error) {
       console.error("Failed to fetch employee settings:", error)
@@ -165,6 +174,8 @@ export default function EmployeesPage() {
         updateData.newPassword = settingsForm.newPassword
       }
       updateData.backdateLimit = settingsForm.backdateLimit
+      updateData.autoApprove = settingsForm.autoApprove
+      updateData.isActive = settingsForm.isActive
 
       const res = await fetch(`/api/employees/${selectedEmployee.id}/settings`, {
         method: "PUT",
@@ -489,6 +500,46 @@ export default function EmployeesPage() {
               <p className="text-xs text-slate-500">
                 How many days back can this employee create time entries (0-365)
               </p>
+            </div>
+
+            {/* Auto Approve Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30 border border-slate-700/50">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-400" />
+                <div>
+                  <p className="text-sm font-medium text-white">Auto-Approve Entries</p>
+                  <p className="text-xs text-slate-500">Skip manual approval for this employee</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettingsForm({ ...settingsForm, autoApprove: !settingsForm.autoApprove })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settingsForm.autoApprove ? 'bg-emerald-600' : 'bg-slate-700'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settingsForm.autoApprove ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
+            {/* Active Status Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30 border border-slate-700/50">
+              <div className="flex items-center gap-2">
+                {settingsForm.isActive ? (
+                  <CheckCircle className="w-4 h-4 text-emerald-400" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-red-400" />
+                )}
+                <div>
+                  <p className="text-sm font-medium text-white">Active Status</p>
+                  <p className="text-xs text-slate-500">Inactive employees cannot log time</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSettingsForm({ ...settingsForm, isActive: !settingsForm.isActive })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settingsForm.isActive ? 'bg-emerald-600' : 'bg-slate-700'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${settingsForm.isActive ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
             </div>
 
             <DialogFooter>

@@ -257,7 +257,8 @@ export default function EmployeeDashboardPage() {
                       key={day.toISOString()}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
-                      onClick={() => {
+                      onClick={() => setSelectedDate(day)}
+                      onDoubleClick={() => {
                         setSelectedDate(day)
                         setDialogOpen(true)
                       }}
