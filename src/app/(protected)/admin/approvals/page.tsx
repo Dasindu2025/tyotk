@@ -8,12 +8,10 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Filter,
   CheckCheck,
   X,
   Loader2,
   AlertTriangle,
-  User,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -179,14 +177,15 @@ export default function ApprovalsPage() {
         )}
       </div>
 
-      {/* Status Filter */}
-      <div className="flex gap-2">
+      {/* Status Filter - Horizontal scroll on mobile */}
+      <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
         {(["PENDING", "APPROVED", "REJECTED", "ALL"] as const).map((status) => (
           <Button
             key={status}
             variant={statusFilter === status ? "default" : "outline"}
             size="sm"
             onClick={() => setStatusFilter(status)}
+            className="whitespace-nowrap flex-shrink-0"
           >
             {status === "PENDING" && <Clock className="w-4 h-4 mr-1 text-amber-400" />}
             {status === "APPROVED" && <CheckCircle className="w-4 h-4 mr-1 text-emerald-400" />}
@@ -235,28 +234,29 @@ export default function ApprovalsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.03 }}
                   className={cn(
-                    "flex items-center justify-between p-4 rounded-lg border transition-all",
+                    "flex flex-col md:flex-row md:items-center md:justify-between p-4 rounded-lg border transition-all gap-3",
                     selectedEntries.has(entry.id)
                       ? "bg-indigo-500/10 border-indigo-500/50"
                       : "bg-slate-800/30 border-slate-700/50 hover:border-slate-600/50"
                   )}
                 >
-                  <div className="flex items-center gap-4">
+                  {/* Top Row: Checkbox + Avatar + Name */}
+                  <div className="flex items-start gap-3">
                     {entry.status === "PENDING" && (
                       <input
                         type="checkbox"
                         checked={selectedEntries.has(entry.id)}
                         onChange={() => toggleSelect(entry.id)}
-                        className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-indigo-600 focus:ring-indigo-500"
+                        className="w-5 h-5 mt-1 rounded border-slate-600 bg-slate-800 text-indigo-600 focus:ring-indigo-500"
                       />
                     )}
                     
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-sm font-medium">
+                    <div className="w-10 h-10 flex-shrink-0 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-sm font-medium">
                       {entry.employee.firstName?.[0]}{entry.employee.lastName?.[0]}
                     </div>
                     
-                    <div>
-                      <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
                         <p className="font-medium text-white">
                           {entry.employee.firstName} {entry.employee.lastName}
                         </p>
@@ -267,7 +267,9 @@ export default function ApprovalsPage() {
                           <Badge variant="warning" className="text-xs">Split</Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-slate-400">
+                      
+                      {/* Entry Details - Stack on mobile */}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-slate-400">
                         <span>{format(new Date(entry.entryDate), "MMM d, yyyy")}</span>
                         <span>
                           {format(new Date(entry.startTime), "HH:mm")} - {format(new Date(entry.endTime), "HH:mm")}
@@ -291,7 +293,8 @@ export default function ApprovalsPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  {/* Action Buttons - Full width on mobile */}
+                  <div className="flex items-center gap-2 md:flex-shrink-0 mt-2 md:mt-0 pl-0 md:pl-4 border-t md:border-t-0 md:border-l border-slate-700/50 pt-3 md:pt-0">
                     {entry.status === "PENDING" ? (
                       <>
                         <Button
@@ -299,8 +302,10 @@ export default function ApprovalsPage() {
                           size="sm"
                           onClick={() => handleApproval([entry.id], "approve")}
                           disabled={processing}
+                          className="flex-1 md:flex-initial"
                         >
-                          <CheckCircle className="w-4 h-4" />
+                          <CheckCircle className="w-4 h-4 md:mr-0" />
+                          <span className="md:hidden ml-2">Approve</span>
                         </Button>
                         <Button
                           variant="destructive"
@@ -310,8 +315,10 @@ export default function ApprovalsPage() {
                             setRejectDialogOpen(true)
                           }}
                           disabled={processing}
+                          className="flex-1 md:flex-initial"
                         >
-                          <XCircle className="w-4 h-4" />
+                          <XCircle className="w-4 h-4 md:mr-0" />
+                          <span className="md:hidden ml-2">Reject</span>
                         </Button>
                       </>
                     ) : (
