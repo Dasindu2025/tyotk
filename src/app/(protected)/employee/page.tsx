@@ -11,7 +11,7 @@ import {
   Calendar,
   CheckCircle2,
   AlertCircle,
-  Sun,
+  Sunset,
   Moon,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -40,7 +40,7 @@ export default function EmployeeDashboardPage() {
   const [weeklyStats, setWeeklyStats] = useState({
     weekHours: 0,
     monthHours: 0,
-    dayHours: 0,
+    eveningHours: 0,
     nightHours: 0,
   })
 
@@ -77,7 +77,7 @@ export default function EmployeeDashboardPage() {
       setWeeklyStats({
         weekHours: data.weekHours || 0,
         monthHours: data.monthHours || 0,
-        dayHours: data.dayHours || 0,
+        eveningHours: data.eveningHours || 0,
         nightHours: data.nightHours || 0,
       })
     } catch (error) {
@@ -154,10 +154,10 @@ export default function EmployeeDashboardPage() {
           <Card className="bg-slate-900/50">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <Sun className="w-8 h-8 text-amber-400" />
+                <Sunset className="w-8 h-8 text-orange-400" />
                 <div>
-                  <p className="text-2xl font-bold text-white">{weeklyStats.dayHours}h</p>
-                  <p className="text-xs text-slate-500">Day hours</p>
+                  <p className="text-2xl font-bold text-white">{weeklyStats.eveningHours}h</p>
+                  <p className="text-xs text-slate-500">Evening hours</p>
                 </div>
               </div>
             </CardContent>

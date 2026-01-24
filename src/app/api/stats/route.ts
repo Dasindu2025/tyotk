@@ -15,14 +15,14 @@ export async function GET() {
     const userId = session.user.id
     const now = new Date()
     
-    // Get workspace settings for day/night hour boundaries
-    // Using type assertion since Prisma client may not be regenerated yet
+    // Get workspace settings for day/evening/night hour boundaries
     const workspace = await prisma.workspace.findUnique({
       where: { id: session.user.workspaceId },
-    }) as { dayStartHour?: number; dayEndHour?: number } | null
+    }) as { dayStartHour?: number; dayEndHour?: number; eveningEndHour?: number } | null
 
-    const dayStartHour = workspace?.dayStartHour ?? 6  // Default 6 AM
-    const dayEndHour = workspace?.dayEndHour ?? 18     // Default 6 PM
+    const dayStartHour = workspace?.dayStartHour ?? 6     // Default 6 AM
+    const dayEndHour = workspace?.dayEndHour ?? 18        // Default 6 PM (evening starts)
+    const eveningEndHour = workspace?.eveningEndHour ?? 22 // Default 10 PM (night starts)
 
     // Date ranges
     const weekStart = startOfWeek(now, { weekStartsOn: 1 }) // Monday
@@ -51,6 +51,7 @@ export async function GET() {
     let weekMinutes = 0
     let monthMinutes = 0
     let dayMinutes = 0
+    let eveningMinutes = 0
     let nightMinutes = 0
 
     for (const entry of monthEntries) {
@@ -64,30 +65,24 @@ export async function GET() {
         weekMinutes += entry.durationMinutes
       }
 
-      // Calculate day/night split for each entry
+      // Calculate day/evening/night split for each entry
       const startHour = new Date(entry.startTime).getHours()
-      const endHour = new Date(entry.endTime).getHours()
       const durationMins = entry.durationMinutes
 
-      // Simplified calculation: determine if entry is primarily day or night
-      if (startHour >= dayStartHour && endHour <= dayEndHour) {
-        // Entirely during day shift
+      // Determine which period the entry belongs to based on start hour
+      // Day: dayStartHour to dayEndHour (e.g., 6-18)
+      // Evening: dayEndHour to eveningEndHour (e.g., 18-22)
+      // Night: eveningEndHour to dayStartHour (e.g., 22-6)
+      
+      if (startHour >= dayStartHour && startHour < dayEndHour) {
+        // Day period
         dayMinutes += durationMins
-      } else if (startHour >= dayEndHour || endHour <= dayStartHour) {
-        // Entirely during night shift
-        nightMinutes += durationMins
+      } else if (startHour >= dayEndHour && startHour < eveningEndHour) {
+        // Evening period
+        eveningMinutes += durationMins
       } else {
-        // Entry spans both day and night - proportional split
-        const entryMidpoint = (startHour + endHour) / 2
-        if (entryMidpoint >= dayStartHour && entryMidpoint < dayEndHour) {
-          // Mostly day
-          dayMinutes += Math.round(durationMins * 0.7)
-          nightMinutes += Math.round(durationMins * 0.3)
-        } else {
-          // Mostly night
-          nightMinutes += Math.round(durationMins * 0.7)
-          dayMinutes += Math.round(durationMins * 0.3)
-        }
+        // Night period (either late night or early morning)
+        nightMinutes += durationMins
       }
     }
 
@@ -96,13 +91,16 @@ export async function GET() {
       weekHours: Math.round((weekMinutes / 60) * 10) / 10,
       monthHours: Math.round((monthMinutes / 60) * 10) / 10,
       dayHours: Math.round((dayMinutes / 60) * 10) / 10,
+      eveningHours: Math.round((eveningMinutes / 60) * 10) / 10,
       nightHours: Math.round((nightMinutes / 60) * 10) / 10,
       weekMinutes,
       monthMinutes,
       dayMinutes,
+      eveningMinutes,
       nightMinutes,
       dayStartHour,
       dayEndHour,
+      eveningEndHour,
     }
 
     return NextResponse.json(stats)

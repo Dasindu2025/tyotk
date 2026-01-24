@@ -9,6 +9,7 @@ import {
   Shield,
   Clock,
   Sun,
+  Sunset,
   Moon,
   Save,
   Loader2,
@@ -23,6 +24,7 @@ import { toast } from "sonner"
 interface WorkspaceSettings {
   dayStartHour: number
   dayEndHour: number
+  eveningEndHour: number
 }
 
 export default function AdminSettingsPage() {
@@ -31,6 +33,7 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState<WorkspaceSettings>({
     dayStartHour: 6,
     dayEndHour: 18,
+    eveningEndHour: 22,
   })
 
   useEffect(() => {
@@ -45,6 +48,7 @@ export default function AdminSettingsPage() {
         setSettings({
           dayStartHour: data.dayStartHour ?? 6,
           dayEndHour: data.dayEndHour ?? 18,
+          eveningEndHour: data.eveningEndHour ?? 22,
         })
       }
     } catch (error) {
@@ -137,16 +141,16 @@ export default function AdminSettingsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sun className="w-5 h-5 text-amber-400" />
+            <Sunset className="w-5 h-5 text-orange-400" />
             <Moon className="w-5 h-5 text-blue-400" />
-            Day/Night Hours Configuration
+            Shift Hours Configuration
           </CardTitle>
           <CardDescription>
-            Configure when day shift starts and ends for hour tracking. 
-            Night hours are calculated outside day shift hours.
+            Configure when Day, Evening, and Night shifts start and end for hour tracking.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="space-y-2">
               <Label htmlFor="dayStartHour" className="flex items-center gap-2">
                 <Sun className="w-4 h-4 text-amber-400" />
@@ -168,8 +172,8 @@ export default function AdminSettingsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="dayEndHour" className="flex items-center gap-2">
-                <Moon className="w-4 h-4 text-blue-400" />
-                Day Shift Ends At (Night Starts)
+                <Sunset className="w-4 h-4 text-orange-400" />
+                Evening Starts At
               </Label>
               <div className="flex items-center gap-3">
                 <Input
@@ -185,6 +189,25 @@ export default function AdminSettingsPage() {
               </div>
               <p className="text-xs text-slate-500">Hour (0-23, 24-hour format)</p>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="eveningEndHour" className="flex items-center gap-2">
+                <Moon className="w-4 h-4 text-blue-400" />
+                Night Starts At
+              </Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="eveningEndHour"
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={settings.eveningEndHour}
+                  onChange={(e) => setSettings(s => ({...s, eveningEndHour: parseInt(e.target.value) || 0}))}
+                  className="w-24"
+                />
+                <span className="text-slate-400">{formatHour(settings.eveningEndHour)}</span>
+              </div>
+              <p className="text-xs text-slate-500">Hour (0-23, 24-hour format)</p>
+            </div>
           </div>
 
           <div className="mt-6 p-4 rounded-lg bg-slate-800/30 border border-slate-700/50">
@@ -195,7 +218,10 @@ export default function AdminSettingsPage() {
               ☀️ Day Hours: {formatHour(settings.dayStartHour)} - {formatHour(settings.dayEndHour)}
             </p>
             <p className="text-slate-400">
-              🌙 Night Hours: {formatHour(settings.dayEndHour)} - {formatHour(settings.dayStartHour)} (next day)
+              🌆 Evening Hours: {formatHour(settings.dayEndHour)} - {formatHour(settings.eveningEndHour)}
+            </p>
+            <p className="text-slate-400">
+              🌙 Night Hours: {formatHour(settings.eveningEndHour)} - {formatHour(settings.dayStartHour)} (next day)
             </p>
           </div>
 

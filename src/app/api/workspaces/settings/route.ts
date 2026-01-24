@@ -13,11 +13,12 @@ export async function GET() {
 
     const workspace = await prisma.workspace.findUnique({
       where: { id: session.user.workspaceId },
-    }) as { dayStartHour?: number; dayEndHour?: number; name: string } | null
+    }) as { dayStartHour?: number; dayEndHour?: number; eveningEndHour?: number; name: string } | null
 
     return NextResponse.json({
       dayStartHour: workspace?.dayStartHour ?? 6,
       dayEndHour: workspace?.dayEndHour ?? 18,
+      eveningEndHour: workspace?.eveningEndHour ?? 22,
       name: workspace?.name,
     })
   } catch (error) {
@@ -44,7 +45,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { dayStartHour, dayEndHour } = body
+    const { dayStartHour, dayEndHour, eveningEndHour } = body
 
     // Validate hours
     if (typeof dayStartHour !== "number" || typeof dayEndHour !== "number") {
@@ -55,11 +56,17 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Hours must be between 0 and 23" }, { status: 400 })
     }
 
+    // Validate eveningEndHour if provided
+    const validEveningEndHour = typeof eveningEndHour === "number" 
+      ? Math.max(0, Math.min(23, eveningEndHour)) 
+      : 22
+
     // Update workspace with raw query to handle pre-regeneration schema
     await prisma.$executeRaw`
       UPDATE "Workspace" 
       SET "dayStartHour" = ${dayStartHour}, 
           "dayEndHour" = ${dayEndHour},
+          "eveningEndHour" = ${validEveningEndHour},
           "updatedAt" = NOW()
       WHERE id = ${session.user.workspaceId}
     `

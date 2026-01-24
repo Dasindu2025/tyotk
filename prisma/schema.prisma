@@ -67,7 +67,8 @@ model Workspace {
   slug           String       @unique
   isActive       Boolean      @default(true)
   dayStartHour   Int          @default(6)   // Day shift starts at 6:00 AM
-  dayEndHour     Int          @default(18)  // Day shift ends at 6:00 PM (night starts)
+  dayEndHour     Int          @default(18)  // Day ends / Evening starts at 6:00 PM
+  eveningEndHour Int          @default(22)  // Evening ends / Night starts at 10:00 PM
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
