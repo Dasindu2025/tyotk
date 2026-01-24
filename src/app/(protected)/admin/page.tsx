@@ -466,25 +466,25 @@ export default function AdminDashboardPage() {
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
                       onClick={() => handleViewCompanyDetails(org)}
-                      className="flex items-center justify-between p-4 rounded-lg bg-slate-800/30 border border-slate-700/50 hover:border-indigo-500/50 cursor-pointer transition-colors group"
+                      className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-lg bg-slate-800/30 border border-slate-700/50 hover:border-indigo-500/50 cursor-pointer transition-colors group gap-3"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center flex-shrink-0">
                           <Building2 className="w-5 h-5 text-white" />
                         </div>
-                        <div>
-                          <p className="font-medium text-white group-hover:text-indigo-300 transition-colors">{org.name}</p>
+                        <div className="min-w-0">
+                          <p className="font-medium text-white group-hover:text-indigo-300 transition-colors truncate">{org.name}</p>
                           <p className="text-sm text-slate-500">/{org.slug}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 flex-wrap pl-13 sm:pl-0">
                         <Badge variant="secondary">
                           {org.workspaces.reduce((sum, w) => sum + (w.adminCount || 0), 0)} admins
                         </Badge>
                         <Badge variant="outline">
-                          {org.workspaces.reduce((sum, w) => sum + (w._count?.users || 0), 0)} total users
+                          {org.workspaces.reduce((sum, w) => sum + (w._count?.users || 0), 0)} users
                         </Badge>
-                        <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-indigo-400 transition-colors" />
+                        <ChevronRight className="w-5 h-5 text-slate-500 group-hover:text-indigo-400 transition-colors hidden sm:block" />
                       </div>
                     </motion.div>
                   ))}
@@ -681,14 +681,14 @@ export default function AdminDashboardPage() {
                     {recentEntries.slice(0, 5).map((entry) => (
                       <div
                         key={entry.id}
-                        className="flex items-center justify-between p-3 rounded-lg bg-slate-800/30 border border-slate-700/50"
+                        className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg bg-slate-800/30 border border-slate-700/50 gap-2"
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-xs font-medium">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white text-xs font-medium flex-shrink-0">
                             {entry.employee?.firstName?.[0]}{entry.employee?.lastName?.[0]}
                           </div>
-                          <div>
-                            <p className="text-sm font-medium text-white">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-white truncate">
                               {entry.employee?.firstName} {entry.employee?.lastName}
                             </p>
                             <p className="text-xs text-slate-500">
@@ -696,7 +696,7 @@ export default function AdminDashboardPage() {
                             </p>
                           </div>
                         </div>
-                        <Badge variant="warning">Pending</Badge>
+                        <Badge variant="warning" className="self-start sm:self-center">Pending</Badge>
                       </div>
                     ))}
                   </div>

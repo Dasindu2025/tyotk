@@ -290,13 +290,13 @@ export default function EmployeesPage() {
                   transition={{ delay: index * 0.05 }}
                   className="p-4 rounded-lg bg-slate-800/30 border border-slate-700/50 hover:border-slate-600/50 transition-colors"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white font-medium">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white font-medium flex-shrink-0">
                         {employee.firstName?.[0]}{employee.lastName?.[0]}
                       </div>
-                      <div>
-                        <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium text-white">
                             {employee.firstName} {employee.lastName}
                           </p>
@@ -314,24 +314,24 @@ export default function EmployeesPage() {
                         {/* Credentials */}
                         <div className="mt-2 space-y-1">
                           <div className="flex items-center gap-2 text-sm">
-                            <Mail className="w-3 h-3 text-slate-500" />
-                            <span className="text-slate-300">{employee.email}</span>
+                            <Mail className="w-3 h-3 text-slate-500 flex-shrink-0" />
+                            <span className="text-slate-300 truncate">{employee.email}</span>
                             <button
                               onClick={() => copyToClipboard(employee.email, "Email")}
-                              className="text-slate-500 hover:text-slate-300"
+                              className="text-slate-500 hover:text-slate-300 flex-shrink-0"
                             >
                               <Copy className="w-3 h-3" />
                             </button>
                           </div>
                           <div className="flex items-center gap-2 text-sm">
-                            <Key className="w-3 h-3 text-slate-500" />
+                            <Key className="w-3 h-3 text-slate-500 flex-shrink-0" />
                             <span className="text-slate-300 font-mono">
                               {showPasswords ? employee.password : "••••••••"}
                             </span>
                             {showPasswords && (
                               <button
                                 onClick={() => copyToClipboard(employee.password, "Password")}
-                                className="text-slate-500 hover:text-slate-300"
+                                className="text-slate-500 hover:text-slate-300 flex-shrink-0"
                               >
                                 <Copy className="w-3 h-3" />
                               </button>
@@ -346,7 +346,7 @@ export default function EmployeesPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => openSettingsDialog(employee)}
-                      className="gap-2"
+                      className="gap-2 w-full sm:w-auto mt-2 sm:mt-0"
                     >
                       <Settings className="w-4 h-4" />
                       Settings
@@ -370,7 +370,7 @@ export default function EmployeesPage() {
           </DialogHeader>
           
           <form onSubmit={handleCreateEmployee} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name *</Label>
                 <Input
