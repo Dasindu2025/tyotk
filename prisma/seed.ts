@@ -154,7 +154,12 @@ async function main() {
   for (let i = 0; i < projects.length; i++) {
     const projectCode = `PRO${String(i + 1).padStart(3, "0")}`
     await prisma.project.upsert({
-      where: { projectCode },
+      where: { 
+        workspaceId_projectCode: {
+          workspaceId: workspace.id,
+          projectCode,
+        }
+      },
       update: {},
       create: {
         workspaceId: workspace.id,
@@ -194,7 +199,12 @@ async function main() {
   for (let i = 0; i < workplaces.length; i++) {
     const locationCode = `LOC${String(i + 1).padStart(3, "0")}`
     await prisma.workplace.upsert({
-      where: { locationCode },
+      where: { 
+        workspaceId_locationCode: {
+          workspaceId: workspace.id,
+          locationCode,
+        }
+      },
       update: {},
       create: {
         workspaceId: workspace.id,
