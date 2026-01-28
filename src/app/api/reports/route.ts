@@ -79,14 +79,21 @@ export async function GET(request: NextRequest) {
         nightMinutes = totalMinutes
       }
 
+      // Format times in UTC to match stored values (avoid timezone conversion issues)
+      const formatTimeUTC = (date: Date) => {
+        const hours = date.getUTCHours().toString().padStart(2, '0')
+        const minutes = date.getUTCMinutes().toString().padStart(2, '0')
+        return `${hours}:${minutes}`
+      }
+
       return {
         id: entry.id,
         date: format(new Date(entry.entryDate), "yyyy-MM-dd"),
         entryDate: format(new Date(entry.entryDate), "yyyy-MM-dd"),
         startTime: entry.startTime,
         endTime: entry.endTime,
-        timeIn: format(new Date(entry.startTime), "HH:mm"),
-        timeOut: format(new Date(entry.endTime), "HH:mm"),
+        timeIn: formatTimeUTC(new Date(entry.startTime)),
+        timeOut: formatTimeUTC(new Date(entry.endTime)),
         durationMinutes: totalMinutes,
         totalHours: (totalMinutes / 60).toFixed(1),
         dayHours: (dayMinutes / 60).toFixed(1),
