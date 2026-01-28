@@ -62,8 +62,11 @@ export async function GET(request: NextRequest) {
     const data = entries.map((entry) => ({
       id: entry.id,
       entryDate: format(entry.entryDate, "yyyy-MM-dd"),
-      startTime: entry.startTime,
-      endTime: entry.endTime,
+      startTime: entry.startTime.toISOString(),
+      endTime: entry.endTime.toISOString(),
+      // Also provide formatted time strings for direct display in 24h format
+      startTimeFormatted: format(entry.startTime, "HH:mm"),
+      endTimeFormatted: format(entry.endTime, "HH:mm"),
       durationMinutes: entry.durationMinutes,
       status: entry.status,
       notes: entry.notes,

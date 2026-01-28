@@ -1,4 +1,4 @@
-import { startOfDay, endOfDay, addDays, differenceInMinutes, isAfter, isBefore, isSameDay } from "date-fns"
+import { startOfDay, addDays, differenceInMinutes, isAfter, isBefore, setHours, setMinutes, setSeconds, setMilliseconds } from "date-fns"
 
 /**
  * Time Entry Service
@@ -7,11 +7,16 @@ import { startOfDay, endOfDay, addDays, differenceInMinutes, isAfter, isBefore, 
  * When a user enters a time range spanning multiple days,
  * this service automatically splits it into separate entries per day.
  * 
- * Example:
+ * Example (with splitHour=0, midnight):
  * Input: Saturday 9:00 PM – Sunday 2:00 AM
  * Output:
  *   Entry 1: Saturday, 21:00-00:00, 180 minutes
  *   Entry 2: Sunday, 00:00-02:00, 120 minutes
+ * 
+ * Example (with splitHour=6, 6AM):
+ * Input: Saturday 9:00 PM – Sunday 2:00 AM
+ * Output:
+ *   Entry 1: Saturday, 21:00-02:00, 300 minutes (no split, both before 6AM cutoff)
  */
 
 export interface TimeEntryInput {
@@ -21,6 +26,7 @@ export interface TimeEntryInput {
   projectId?: string
   workplaceId?: string
   notes?: string
+  splitHour?: number  // Hour when day splits (0-23, default 0 = midnight)
 }
 
 export interface SplitTimeEntry {
@@ -34,35 +40,46 @@ export interface SplitTimeEntry {
 }
 
 /**
- * Check if a time range crosses midnight (spans multiple days)
+ * Get the split point for a given date and hour
+ * If splitHour is 0, returns midnight of next day
+ * If splitHour is 6, returns 6:00 AM of appropriate day
  */
-export function crossesMidnight(startTime: Date, endTime: Date): boolean {
-  return !isSameDay(startTime, endTime)
+function getSplitPoint(date: Date, splitHour: number): Date {
+  // Get the split hour on the NEXT calendar day
+  const nextDay = addDays(startOfDay(date), 1)
+  return setMilliseconds(setSeconds(setMinutes(setHours(nextDay, splitHour), 0), 0), 0)
 }
 
 /**
- * Get midnight of the next day
+ * Check if a time range crosses the split point
  */
-function getMidnight(date: Date): Date {
-  return startOfDay(addDays(date, 1))
+export function crossesSplitPoint(startTime: Date, endTime: Date, splitHour: number = 0): boolean {
+  const splitPoint = getSplitPoint(startTime, splitHour)
+  return isAfter(endTime, splitPoint)
 }
 
 /**
- * Split a time entry that crosses midnight into multiple entries
- * Each entry represents work done on a single calendar day
+ * Split a time entry that crosses the split hour into multiple entries
+ * Each entry represents work done on a single "work day"
  */
 export function splitTimeEntry(input: TimeEntryInput): SplitTimeEntry[] {
-  const { startTime, endTime } = input
+  const { startTime, endTime, splitHour = 0 } = input
   
   // Validate times
   if (isAfter(startTime, endTime)) {
     throw new Error("Start time must be before end time")
   }
   
-  // If same day, return single entry
-  if (isSameDay(startTime, endTime)) {
+  // Check if we need to split
+  const splitPoint = getSplitPoint(startTime, splitHour)
+  const needsSplit = isAfter(endTime, splitPoint)
+  
+  // If no split needed, return single entry
+  if (!needsSplit) {
+    // Entry date is the start date (adjusted for split hour)
+    const entryDate = startOfDay(startTime)
     return [{
-      entryDate: startOfDay(startTime),
+      entryDate,
       startTime,
       endTime,
       durationMinutes: differenceInMinutes(endTime, startTime),
@@ -75,9 +92,9 @@ export function splitTimeEntry(input: TimeEntryInput): SplitTimeEntry[] {
   let currentStart = startTime
   
   while (isBefore(currentStart, endTime)) {
-    // Determine the end of the current day's entry
-    const midnight = getMidnight(currentStart)
-    const currentEnd = isBefore(midnight, endTime) ? midnight : endTime
+    // Determine the split point from current start
+    const nextSplit = getSplitPoint(currentStart, splitHour)
+    const currentEnd = isBefore(nextSplit, endTime) ? nextSplit : endTime
     
     // Calculate duration
     const durationMinutes = differenceInMinutes(currentEnd, currentStart)
@@ -95,8 +112,8 @@ export function splitTimeEntry(input: TimeEntryInput): SplitTimeEntry[] {
       })
     }
     
-    // Move to next day
-    currentStart = midnight
+    // Move to next split point
+    currentStart = nextSplit
   }
   
   return entries

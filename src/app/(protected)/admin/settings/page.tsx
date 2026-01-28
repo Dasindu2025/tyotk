@@ -13,6 +13,7 @@ import {
   Moon,
   Save,
   Loader2,
+  Scissors,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -25,6 +26,7 @@ interface WorkspaceSettings {
   dayStartHour: number
   dayEndHour: number
   eveningEndHour: number
+  daySplitHour: number
 }
 
 export default function AdminSettingsPage() {
@@ -34,6 +36,7 @@ export default function AdminSettingsPage() {
     dayStartHour: 6,
     dayEndHour: 18,
     eveningEndHour: 22,
+    daySplitHour: 0,
   })
 
   useEffect(() => {
@@ -49,6 +52,7 @@ export default function AdminSettingsPage() {
           dayStartHour: data.dayStartHour ?? 6,
           dayEndHour: data.dayEndHour ?? 18,
           eveningEndHour: data.eveningEndHour ?? 22,
+          daySplitHour: data.daySplitHour ?? 0,
         })
       }
     } catch (error) {
@@ -150,7 +154,7 @@ export default function AdminSettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="space-y-2">
               <Label htmlFor="dayStartHour" className="flex items-center gap-2">
                 <Sun className="w-4 h-4 text-amber-400" />
@@ -208,6 +212,35 @@ export default function AdminSettingsPage() {
               </div>
               <p className="text-xs text-slate-500">Hour (0-23, 24-hour format)</p>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="daySplitHour" className="flex items-center gap-2">
+                <Scissors className="w-4 h-4 text-rose-400" />
+                Day Split Hour
+              </Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="daySplitHour"
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={settings.daySplitHour}
+                  onChange={(e) => setSettings(s => ({...s, daySplitHour: parseInt(e.target.value) || 0}))}
+                  className="w-24"
+                />
+                <span className="text-slate-400">{formatHour(settings.daySplitHour)}</span>
+              </div>
+              <p className="text-xs text-slate-500">When entries split across days</p>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 rounded-lg bg-rose-950/20 border border-rose-500/30">
+            <p className="text-sm text-rose-300">
+              <strong>✂️ Day Split Hour:</strong> {formatHour(settings.daySplitHour)}
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              Time entries crossing this hour will be split into separate day entries.
+              Default is midnight (0). Set to 6 if your &quot;work day&quot; starts at 6 AM.
+            </p>
           </div>
 
           <div className="mt-6 p-4 rounded-lg bg-slate-800/30 border border-slate-700/50">

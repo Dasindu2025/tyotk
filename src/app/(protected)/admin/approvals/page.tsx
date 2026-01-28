@@ -33,6 +33,8 @@ interface TimeEntry {
   entryDate: string
   startTime: string
   endTime: string
+  startTimeFormatted: string
+  endTimeFormatted: string
   durationMinutes: number
   status: "PENDING" | "APPROVED" | "REJECTED"
   notes?: string
@@ -272,7 +274,7 @@ export default function ApprovalsPage() {
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-slate-400">
                         <span>{format(new Date(entry.entryDate), "MMM d, yyyy")}</span>
                         <span>
-                          {format(new Date(entry.startTime), "HH:mm")} - {format(new Date(entry.endTime), "HH:mm")}
+                          {entry.startTimeFormatted} - {entry.endTimeFormatted}
                         </span>
                         <span className="font-medium text-indigo-400">
                           {formatMinutesToHours(entry.durationMinutes)}

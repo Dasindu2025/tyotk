@@ -198,6 +198,9 @@ export async function POST(request: NextRequest) {
     const backdateLimit = (user as { backdateLimit?: number } | null)?.backdateLimit ?? 7
     const autoApprove = (user as { autoApprove?: boolean } | null)?.autoApprove ?? false
     
+    // Split hour is hardcoded to midnight (00:00)
+    const splitHour = 0
+    
     // Check if entry date is within allowed backdate range
     const today = startOfDay(new Date())
     const entryDay = startOfDay(startDate)
@@ -279,20 +282,22 @@ export async function POST(request: NextRequest) {
       // We can construct midnight by using the secondDate at 00:00 local
       // Since secondDate is parsed from entryDate+1, it's at 00:00 UTC of that day
       
-      // Calculate midnight timestamp (when entry 1 ends and entry 2 starts)
-      // secondDate is already at 00:00:00 of the next day
-      const midnightUTC = secondDate.getTime()
+      // Calculate split point (configurable hour when day splits)
+      // secondDate is the next calendar day, add splitHour to get actual split time
+      const splitPointTime = new Date(secondDate)
+      splitPointTime.setHours(splitHour, 0, 0, 0)
+      const splitPointUTC = splitPointTime.getTime()
       
-      // First entry: from startDate to midnight
-      const firstDuration = Math.round((midnightUTC - startDate.getTime()) / (1000 * 60))
-      // Second entry: from midnight to endDate  
-      const secondDuration = Math.round((endDate.getTime() - midnightUTC) / (1000 * 60))
+      // First entry: from startDate to split point
+      const firstDuration = Math.round((splitPointUTC - startDate.getTime()) / (1000 * 60))
+      // Second entry: from split point to endDate  
+      const secondDuration = Math.round((endDate.getTime() - splitPointUTC) / (1000 * 60))
       
       if (firstDuration > 0) {
         splitEntries.push({
           entryDate: firstDate,
           startTime: startDate,
-          endTime: new Date(midnightUTC),
+          endTime: new Date(splitPointUTC),
           durationMinutes: firstDuration,
           isSplit: true,
           originalStart: startDate,
@@ -303,7 +308,7 @@ export async function POST(request: NextRequest) {
       if (secondDuration > 0) {
         splitEntries.push({
           entryDate: secondDate,
-          startTime: new Date(midnightUTC),
+          startTime: new Date(splitPointUTC),
           endTime: endDate,
           durationMinutes: secondDuration,
           isSplit: true,
