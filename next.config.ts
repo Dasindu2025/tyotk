@@ -4,6 +4,12 @@ const nextConfig: NextConfig = {
   // Enable standalone output for Docker
   output: "standalone",
 
+  // Disable x-powered-by header for smaller responses
+  poweredByHeader: false,
+
+  // Enable compression
+  compress: true,
+
   // Experimental features
   experimental: {
     // Enable server actions
@@ -65,3 +71,4 @@ const nextConfig: NextConfig = {
 }
 
 export default nextConfig
+

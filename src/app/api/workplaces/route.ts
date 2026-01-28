@@ -58,6 +58,10 @@ export async function GET(request: NextRequest) {
         isActive: w.isActive,
         createdAt: w.createdAt,
       })),
+    }, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+      },
     })
   } catch (error) {
     console.error("Error fetching workplaces:", error)

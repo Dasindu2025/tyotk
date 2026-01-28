@@ -103,7 +103,11 @@ export async function GET() {
       eveningEndHour,
     }
 
-    return NextResponse.json(stats)
+    return NextResponse.json(stats, {
+      headers: {
+        'Cache-Control': 'private, max-age=30, stale-while-revalidate=60',
+      },
+    })
   } catch (error) {
     console.error("Error fetching stats:", error)
     return NextResponse.json(

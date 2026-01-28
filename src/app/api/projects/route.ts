@@ -79,6 +79,10 @@ export async function GET(request: NextRequest) {
         workspaceName: p.workspace.name,
         createdAt: p.createdAt,
       })),
+    }, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+      },
     })
   } catch (error) {
     console.error("Error fetching projects:", error)
