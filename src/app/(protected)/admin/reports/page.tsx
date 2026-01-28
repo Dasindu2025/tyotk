@@ -83,13 +83,11 @@ export default function AdminReportsPage() {
       }
 
       const data = await res.json()
-      console.log("[Reports Page] Data received:", data)
 
       setEntries(data.entries || [])
       setSummary(data.summary || null)
       setEmployeeSummaries(data.employeeSummary || [])
     } catch (error) {
-      console.error("Failed to fetch report data:", error)
       setError("Failed to load report data")
     } finally {
       setLoading(false)

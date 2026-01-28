@@ -21,8 +21,6 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
 
-    console.log("[Reports API] Request:", { startDate, endDate, workspaceId: session.user.workspaceId })
-
     // Build date filter
     const dateFilter: any = {}
     if (startDate) {
@@ -49,8 +47,6 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [{ entryDate: "desc" }, { startTime: "desc" }]
     })
-
-    console.log("[Reports API] Found entries:", entries.length)
 
     // Get workspace settings for day/night calculation
     const workspace = await prisma.workspace.findUnique({

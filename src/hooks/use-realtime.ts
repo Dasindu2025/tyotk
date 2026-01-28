@@ -49,7 +49,7 @@ export function useRealtime(options: UseRealtimeOptions = {}) {
     eventSourceRef.current = eventSource
 
     eventSource.onopen = () => {
-      console.log("[Realtime] Connected")
+      // Connection established
     }
 
     eventSource.onmessage = (event) => {
@@ -79,7 +79,6 @@ export function useRealtime(options: UseRealtimeOptions = {}) {
     }
 
     eventSource.onerror = () => {
-      console.log("[Realtime] Connection error, reconnecting...")
       eventSource.close()
       
       // Reconnect after 5 seconds

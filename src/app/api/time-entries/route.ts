@@ -54,29 +54,10 @@ export async function GET(request: NextRequest) {
       if (userId) {
         where.userId = userId
       } else {
-        // Get all user IDs in the workspace first
-        const workspaceUsers = await prisma.user.findMany({
-          where: { workspaceId: session.user.workspaceId },
-          select: { id: true }
-        })
-        const workspaceUserIds = workspaceUsers.map(u => u.id)
-        
-        console.log("[TimeEntries API] Workspace users:", workspaceUserIds.length)
-        
-        if (workspaceUserIds.length > 0) {
-          where.userId = { in: workspaceUserIds }
-        } else {
-          // No users in workspace, return empty
-          return NextResponse.json({
-            data: [],
-            pagination: { page, limit, total: 0, totalPages: 0 }
-          })
-        }
+        // Filter by workspace through user relation - eliminates extra DB query
+        where.user = { workspaceId: session.user.workspaceId }
       }
     }
-
-    console.log("[TimeEntries API] Query params:", { startDate, endDate, status, projectId, userId })
-    console.log("[TimeEntries API] Session workspace:", session.user.workspaceId)
 
     if (startDate) {
       where.entryDate = { gte: startOfDay(parseISO(startDate)) }
@@ -217,23 +198,10 @@ export async function POST(request: NextRequest) {
     const backdateLimit = (user as { backdateLimit?: number } | null)?.backdateLimit ?? 7
     const autoApprove = (user as { autoApprove?: boolean } | null)?.autoApprove ?? false
     
-    console.log("[TimeEntry POST] Backdate check:", {
-      userId: session.user.id,
-      userBackdateLimitFromDB: (user as { backdateLimit?: number } | null)?.backdateLimit,
-      backdateLimitUsed: backdateLimit,
-    })
-    
     // Check if entry date is within allowed backdate range
     const today = startOfDay(new Date())
     const entryDay = startOfDay(startDate)
     const daysDiff = Math.floor((today.getTime() - entryDay.getTime()) / (1000 * 60 * 60 * 24))
-    
-    console.log("[TimeEntry POST] Date comparison:", {
-      today: today.toISOString(),
-      entryDay: entryDay.toISOString(),
-      daysDiff,
-      allowed: daysDiff <= backdateLimit,
-    })
     
     if (daysDiff > backdateLimit) {
       return NextResponse.json(
@@ -283,13 +251,6 @@ export async function POST(request: NextRequest) {
 
     // TIMEZONE-AWARE SPLITTING
     // Use explicit entryDate and crossesMidnight from frontend instead of UTC date comparison
-    console.log("[TimeEntry POST] Input:", {
-      startTime: startDate.toISOString(),
-      endTime: endDate.toISOString(),
-      entryDate,
-      crossesMidnight,
-    })
-    
     const splitEntries: SplitTimeEntry[] = []
     const totalMinutes = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60))
     
@@ -327,15 +288,6 @@ export async function POST(request: NextRequest) {
       // Second entry: from midnight to endDate  
       const secondDuration = Math.round((endDate.getTime() - midnightUTC) / (1000 * 60))
       
-      console.log("[TimeEntry POST] Split calculation:", {
-        firstDate: format(firstDate, "yyyy-MM-dd"),
-        secondDate: format(secondDate, "yyyy-MM-dd"),
-        midnightUTC: new Date(midnightUTC).toISOString(),
-        firstDuration,
-        secondDuration,
-        totalMinutes,
-      })
-      
       if (firstDuration > 0) {
         splitEntries.push({
           entryDate: firstDate,
@@ -371,17 +323,6 @@ export async function POST(request: NextRequest) {
       })
     }
     
-    console.log("[TimeEntry POST] Split result:", {
-      numberOfEntries: splitEntries.length,
-      entries: splitEntries.map(e => ({
-        entryDate: format(e.entryDate, "yyyy-MM-dd"),
-        startTime: e.startTime.toISOString(),
-        endTime: e.endTime.toISOString(),
-        durationMinutes: e.durationMinutes,
-        isSplit: e.isSplit,
-      }))
-    })
-
     // Create all entries in a transaction
     interface CreatedEntryResult {
       id: string
