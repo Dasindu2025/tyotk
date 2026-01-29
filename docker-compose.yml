@@ -48,6 +48,7 @@ services:
       - NEXTAUTH_URL=https://tyotrack.com
       - AUTH_TRUST_HOST=true
       - NODE_ENV=production
+      - TZ=Asia/Colombo
     depends_on:
       postgres:
         condition: service_healthy

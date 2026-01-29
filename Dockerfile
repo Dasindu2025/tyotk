@@ -31,6 +31,10 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV TZ=Asia/Colombo
+
+# Install timezone data for Alpine
+RUN apk add --no-cache tzdata
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
