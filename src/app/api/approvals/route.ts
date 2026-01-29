@@ -60,10 +60,10 @@ export async function GET(request: NextRequest) {
     ])
 
     const data = entries.map((entry) => {
-      // Format times in UTC to match stored values (avoid timezone conversion issues)
-      const formatTimeUTC = (date: Date) => {
-        const hours = date.getUTCHours().toString().padStart(2, '0')
-        const minutes = date.getUTCMinutes().toString().padStart(2, '0')
+      // Format times using local hours (times are now stored as local, not UTC)
+      const formatTimeLocal = (date: Date) => {
+        const hours = date.getHours().toString().padStart(2, '0')
+        const minutes = date.getMinutes().toString().padStart(2, '0')
         return `${hours}:${minutes}`
       }
       
@@ -72,9 +72,9 @@ export async function GET(request: NextRequest) {
         entryDate: format(entry.entryDate, "yyyy-MM-dd"),
         startTime: entry.startTime.toISOString(),
         endTime: entry.endTime.toISOString(),
-        // Format times in UTC for accurate display
-        startTimeFormatted: formatTimeUTC(entry.startTime),
-        endTimeFormatted: formatTimeUTC(entry.endTime),
+        // Format times for display
+        startTimeFormatted: formatTimeLocal(entry.startTime),
+        endTimeFormatted: formatTimeLocal(entry.endTime),
       durationMinutes: entry.durationMinutes,
       status: entry.status,
       notes: entry.notes,

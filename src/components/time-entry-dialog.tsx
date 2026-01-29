@@ -136,15 +136,15 @@ export function TimeEntryDialog({ open, onOpenChange, onSuccess, selectedDate }:
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          startTime: new Date(startDateTime).toISOString(),
-          endTime: new Date(endDateTime).toISOString(),
+          // Send local time strings directly WITHOUT timezone conversion
+          // The server will parse these as local times and store them as-is
+          startTime: startDateTime, // e.g., "2026-01-28T21:00:00"
+          endTime: endDateTime,     // e.g., "2026-01-29T05:30:00"
           projectId: data.projectId || undefined,
           workplaceId: data.workplaceId || undefined,
           notes: data.notes || undefined,
-          // Send explicit entry dates for timezone-aware splitting
-          entryDate: data.date, // e.g., "2026-01-19"
+          entryDate: data.date,
           crossesMidnight: crossesMidnight,
-          timezoneOffset: new Date().getTimezoneOffset(), // minutes offset from UTC (e.g., -330 for IST)
         }),
       })
 
