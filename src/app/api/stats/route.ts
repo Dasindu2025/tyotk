@@ -73,19 +73,10 @@ export async function GET(request: Request) {
     const dayEndHour = workspace?.dayEndHour ?? 18
     const eveningEndHour = workspace?.eveningEndHour ?? 22
 
-    console.log("[Stats API] Workspace hour settings:", {
-      workspaceId: session.user.workspaceId,
-      dayStartHour,
-      dayEndHour,
-      eveningEndHour,
-      dayPeriod: `${dayStartHour}:00 - ${dayEndHour}:00`,
-      eveningPeriod: `${dayEndHour}:00 - ${eveningEndHour}:00`,
-      nightPeriod: `${eveningEndHour}:00 - ${dayStartHour}:00 (next day)`,
-    })
-
-    // Timezone offset for period calculations (IST = UTC+5:30 = +330 minutes)
-    // TODO: Make this configurable per workspace
-    const timezoneOffsetMins = 330
+    // Timezone offset for period calculations
+    // NOTE: Entries are stored in local time (not UTC), so no offset needed
+    // The times in the database (e.g., 09:00) represent local time directly
+    const timezoneOffsetMins = 0
 
     // Build where clause matching time-entries API behavior:
     // - Employees see only their own entries
@@ -117,17 +108,6 @@ export async function GET(request: Request) {
       },
     })
 
-    // Debug: Log all entries being counted
-    console.log("[Stats API] Debug Info:", {
-      userId,
-      role: session.user.role,
-      monthStartUTC: monthStartUTC.toISOString(),
-      monthEndUTC: monthEndUTC.toISOString(),
-      entriesCount: monthEntries.length,
-      totalMinutes: monthEntries.reduce((sum, e) => sum + e.durationMinutes, 0),
-      totalHours: Math.round(monthEntries.reduce((sum, e) => sum + e.durationMinutes, 0) / 60 * 10) / 10
-    })
-
     let weekMinutes = 0
     let monthMinutes = 0
     let dayTotal = 0
@@ -142,9 +122,12 @@ export async function GET(request: Request) {
         weekMinutes += entry.durationMinutes
       }
 
+      const startDate = new Date(entry.startTime)
+      const endDate = new Date(entry.endTime)
+      
       const split = calculatePeriodSplit(
-        new Date(entry.startTime), 
-        new Date(entry.endTime), 
+        startDate, 
+        endDate, 
         dayStartHour, 
         dayEndHour, 
         eveningEndHour,
