@@ -91,8 +91,10 @@ export default function EmployeeDashboardPage() {
     try {
       const start = format(monthStart, "yyyy-MM-dd")
       const end = format(monthEnd, "yyyy-MM-dd")
+      console.log('[Employee Dashboard] Fetching entries for date range:', { start, end, currentMonth: format(currentMonth, "yyyy-MM") })
       const res = await fetch(`/api/time-entries?startDate=${start}&endDate=${end}`)
       const data = await res.json()
+      console.log('[Employee Dashboard] Entries received:', data.data?.length || 0, 'entries')
       setEntries(data.data || [])
     } catch (error) {
       console.error("Failed to fetch entries:", error)

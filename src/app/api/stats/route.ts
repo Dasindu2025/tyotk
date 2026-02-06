@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { auth } from "@/lib/auth"
-import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format, startOfDay, endOfDay, parseISO } from "date-fns"
+import { startOfWeek, endOfWeek, format, startOfDay, endOfDay } from "date-fns"
 import { calculatePeriodSplit } from "@/lib/services/time-entry"
 
 // GET - Get employee statistics
@@ -21,37 +21,48 @@ export async function GET(request: Request) {
     const queryStartDate = searchParams.get("startDate")
     const queryEndDate = searchParams.get("endDate")
 
-    let monthStartLocal: Date
-    let monthEndLocal: Date
+    console.log("[Stats API] Query parameters received:", { queryStartDate, queryEndDate })
+
+    // Use UTC dates to match database DATE column storage
+    // This prevents timezone issues at month boundaries
+    let monthStartUTC: Date
+    let monthEndUTC: Date
 
     if (queryStartDate && queryEndDate) {
-      monthStartLocal = startOfDay(parseISO(queryStartDate))
-      monthEndLocal = endOfDay(parseISO(queryEndDate))
+      // Parse as UTC midnight to match database DATE storage
+      monthStartUTC = new Date(queryStartDate + "T00:00:00.000Z")
+      monthEndUTC = new Date(queryEndDate + "T23:59:59.999Z")
     } else {
-      monthStartLocal = startOfDay(startOfMonth(now))
-      monthEndLocal = endOfDay(endOfMonth(now))
+      // Default to current month in UTC
+      const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+      monthStartUTC = new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth(), 1, 0, 0, 0, 0))
+      const lastDayOfMonth = new Date(Date.UTC(nowUTC.getUTCFullYear(), nowUTC.getUTCMonth() + 1, 0))
+      monthEndUTC = new Date(Date.UTC(lastDayOfMonth.getUTCFullYear(), lastDayOfMonth.getUTCMonth(), lastDayOfMonth.getUTCDate(), 23, 59, 59, 999))
     }
 
-    // Determine the week range
+    console.log("[Stats API] Date range (UTC):", { 
+      monthStartUTC: monthStartUTC.toISOString(), 
+      monthEndUTC: monthEndUTC.toISOString() 
+    })
+
+    // Determine the week range (Sunday-Saturday to match calendar display)
     let weekStartLocal: Date
     let weekEndLocal: Date
 
-    const isCurrentMonth = now >= monthStartLocal && now <= monthEndLocal
+    const isCurrentMonth = now >= monthStartUTC && now <= monthEndUTC
 
     if (isCurrentMonth) {
-      weekStartLocal = startOfDay(startOfWeek(now, { weekStartsOn: 1 })) // Monday
-      weekEndLocal = endOfDay(endOfWeek(now, { weekStartsOn: 1 }))
+      weekStartLocal = startOfDay(startOfWeek(now, { weekStartsOn: 0 })) // Sunday
+      weekEndLocal = endOfDay(endOfWeek(now, { weekStartsOn: 0 }))
     } else {
       // For other months, "This week" shows stats for the first full week of that month
-      weekStartLocal = startOfDay(startOfWeek(monthStartLocal, { weekStartsOn: 1 }))
-      weekEndLocal = endOfDay(endOfWeek(monthStartLocal, { weekStartsOn: 1 }))
+      weekStartLocal = startOfDay(startOfWeek(monthStartUTC, { weekStartsOn: 0 }))
+      weekEndLocal = endOfDay(endOfWeek(monthStartUTC, { weekStartsOn: 0 }))
     }
     
     // Format dates as YYYY-MM-DD for string comparison
     const weekStartStr = format(weekStartLocal, "yyyy-MM-dd")
     const weekEndStr = format(weekEndLocal, "yyyy-MM-dd")
-    const monthStartStr = format(monthStartLocal, "yyyy-MM-dd")
-    const monthEndStr = format(monthEndLocal, "yyyy-MM-dd")
 
     // Get workspace settings
     const workspace = await prisma.workspace.findUnique({
@@ -62,16 +73,37 @@ export async function GET(request: Request) {
     const dayEndHour = workspace?.dayEndHour ?? 18
     const eveningEndHour = workspace?.eveningEndHour ?? 22
 
-    // Get approved entries for the requested month directly from database (optimized)
-    const monthEntries = await prisma.timeEntry.findMany({
-      where: {
-        userId,
-        status: "APPROVED",
-        entryDate: {
-          gte: monthStartLocal,
-          lte: monthEndLocal,
-        },
+    console.log("[Stats API] Workspace hour settings:", {
+      workspaceId: session.user.workspaceId,
+      dayStartHour,
+      dayEndHour,
+      eveningEndHour,
+      dayPeriod: `${dayStartHour}:00 - ${dayEndHour}:00`,
+      eveningPeriod: `${dayEndHour}:00 - ${eveningEndHour}:00`,
+      nightPeriod: `${eveningEndHour}:00 - ${dayStartHour}:00 (next day)`,
+    })
+
+    // Build where clause matching time-entries API behavior:
+    // - Employees see only their own entries
+    // - Admins see all workspace entries (same as calendar view)
+    const entryWhereClause: Record<string, unknown> = {
+      status: "APPROVED",
+      entryDate: {
+        gte: monthStartUTC,
+        lte: monthEndUTC,
       },
+    }
+
+    if (session.user.role === "EMPLOYEE") {
+      entryWhereClause.userId = userId
+    } else {
+      // Admins see stats for all workspace users (matching calendar view)
+      entryWhereClause.user = { workspaceId: session.user.workspaceId }
+    }
+
+    // Get approved entries for the requested month
+    const monthEntries = await prisma.timeEntry.findMany({
+      where: entryWhereClause,
       select: {
         id: true,
         startTime: true,
@@ -79,6 +111,17 @@ export async function GET(request: Request) {
         durationMinutes: true,
         entryDate: true,
       },
+    })
+
+    // Debug: Log all entries being counted
+    console.log("[Stats API] Debug Info:", {
+      userId,
+      role: session.user.role,
+      monthStartUTC: monthStartUTC.toISOString(),
+      monthEndUTC: monthEndUTC.toISOString(),
+      entriesCount: monthEntries.length,
+      totalMinutes: monthEntries.reduce((sum, e) => sum + e.durationMinutes, 0),
+      totalHours: Math.round(monthEntries.reduce((sum, e) => sum + e.durationMinutes, 0) / 60 * 10) / 10
     })
 
     let weekMinutes = 0

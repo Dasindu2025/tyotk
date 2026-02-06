@@ -192,9 +192,10 @@ export function calculatePeriodSplit(
   dayEndHour: number,
   eveningEndHour: number
 ): { dayMins: number; eveningMins: number; nightMins: number } {
-  // Get minutes from start of day in UTC (standardized format for this app)
-  const startMins = startTime.getUTCHours() * 60 + startTime.getUTCMinutes()
-  let endMins = endTime.getUTCHours() * 60 + endTime.getUTCMinutes()
+  // Use LOCAL hours since workspace settings are configured in local time
+  // (e.g., admin sets "Evening starts at 6 PM" meaning local 6 PM)
+  const startMins = startTime.getHours() * 60 + startTime.getMinutes()
+  let endMins = endTime.getHours() * 60 + endTime.getMinutes()
   
   // Handle cross-midnight by adding 24 hours to end minutes
   if (endMins <= startMins) {
