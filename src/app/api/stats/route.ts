@@ -83,6 +83,10 @@ export async function GET(request: Request) {
       nightPeriod: `${eveningEndHour}:00 - ${dayStartHour}:00 (next day)`,
     })
 
+    // Timezone offset for period calculations (IST = UTC+5:30 = +330 minutes)
+    // TODO: Make this configurable per workspace
+    const timezoneOffsetMins = 330
+
     // Build where clause matching time-entries API behavior:
     // - Employees see only their own entries
     // - Admins see all workspace entries (same as calendar view)
@@ -143,7 +147,8 @@ export async function GET(request: Request) {
         new Date(entry.endTime), 
         dayStartHour, 
         dayEndHour, 
-        eveningEndHour
+        eveningEndHour,
+        timezoneOffsetMins
       )
       
       dayTotal += split.dayMins

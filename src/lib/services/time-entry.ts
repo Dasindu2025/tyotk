@@ -184,18 +184,33 @@ export function groupEntriesByDate<T extends { entryDate: Date }>(
 /**
  * Calculate the split of time across Day, Evening, and Night periods
  * based on workspace hour configurations.
+ * 
+ * @param startTime - Entry start time (stored in UTC)
+ * @param endTime - Entry end time (stored in UTC)
+ * @param dayStartHour - Hour when day period starts (6 = 6:00 AM local)
+ * @param dayEndHour - Hour when day period ends / evening starts (18 = 6:00 PM local)
+ * @param eveningEndHour - Hour when evening ends / night starts (22 = 10:00 PM local)
+ * @param timezoneOffsetMins - Timezone offset in minutes from UTC (e.g., IST = +330)
  */
 export function calculatePeriodSplit(
   startTime: Date,
   endTime: Date,
   dayStartHour: number,
   dayEndHour: number,
-  eveningEndHour: number
+  eveningEndHour: number,
+  timezoneOffsetMins: number = 330 // Default to IST (+5:30)
 ): { dayMins: number; eveningMins: number; nightMins: number } {
-  // Use LOCAL hours since workspace settings are configured in local time
-  // (e.g., admin sets "Evening starts at 6 PM" meaning local 6 PM)
-  const startMins = startTime.getHours() * 60 + startTime.getMinutes()
-  let endMins = endTime.getHours() * 60 + endTime.getMinutes()
+  // Convert UTC times to local time by adding timezone offset
+  // UTC hours + offset = local hours
+  const startUtcMins = startTime.getUTCHours() * 60 + startTime.getUTCMinutes()
+  const endUtcMins = endTime.getUTCHours() * 60 + endTime.getUTCMinutes()
+  
+  // Apply timezone offset to get local time minutes
+  let startMins = (startUtcMins + timezoneOffsetMins) % (24 * 60)
+  if (startMins < 0) startMins += 24 * 60
+  
+  let endMins = (endUtcMins + timezoneOffsetMins) % (24 * 60)
+  if (endMins < 0) endMins += 24 * 60
   
   // Handle cross-midnight by adding 24 hours to end minutes
   if (endMins <= startMins) {
@@ -222,8 +237,13 @@ export function calculatePeriodSplit(
   
   const dayMins = getOverlap(dayStartMins, dayEndMins)
   const eveningMins = getOverlap(dayEndMins, eveningEndMins)
-  // Night period spans from eveningEnd to dayStart (crosses midnight)
-  const nightMins = getOverlap(eveningEndMins, dayStartMins + 24 * 60)
+  
+  // Night period has two segments:
+  // 1. Late night: eveningEnd (22:00) to midnight (24:00)
+  // 2. Early morning: midnight (00:00) to dayStart (06:00)
+  const lateNightMins = getOverlap(eveningEndMins, 24 * 60)
+  const earlyMorningMins = getOverlap(0, dayStartMins)
+  const nightMins = lateNightMins + earlyMorningMins
   
   return { dayMins, eveningMins, nightMins }
 }
