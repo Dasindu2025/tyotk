@@ -76,7 +76,8 @@ export default function EmployeeDashboardPage() {
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMonth])
 
   // Poll for stats updates every 30 seconds (in case entries are approved by admin)
   useEffect(() => {
@@ -85,7 +86,8 @@ export default function EmployeeDashboardPage() {
     }, 30000) // Refresh every 30 seconds
     
     return () => clearInterval(interval)
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentMonth]) // Reset interval when month changes
 
   async function fetchEntries() {
     try {
