@@ -87,24 +87,35 @@ export async function GET(request: NextRequest) {
       prisma.timeEntry.count({ where }),
     ])
 
+    // IST timezone offset: +5:30 = 330 minutes
+    const TIMEZONE_OFFSET_MS = 330 * 60 * 1000
+    
+    // Convert UTC Date to local IST Date for display
+    const convertUTCToLocal = (utcDate: Date): Date => {
+      return new Date(utcDate.getTime() + TIMEZONE_OFFSET_MS)
+    }
+    
     const data = entries.map((entry) => {
-      // Format times using UTC methods to extract exact time values
-      // Times are stored as UTC dates but represent local time values
-      // Using getUTCHours/getUTCMinutes ensures we get the exact time without timezone conversion
+      // Convert UTC to local IST for formatting
+      const localStartTime = convertUTCToLocal(entry.startTime)
+      const localEndTime = convertUTCToLocal(entry.endTime)
+      
+      // Format times - now using local IST times
       const formatTimeLocal = (date: Date) => {
-        const hours = date.getUTCHours().toString().padStart(2, '0')
-        const minutes = date.getUTCMinutes().toString().padStart(2, '0')
+        const hours = date.getHours().toString().padStart(2, '0')
+        const minutes = date.getMinutes().toString().padStart(2, '0')
         return `${hours}:${minutes}`
       }
       
       return {
         id: entry.id,
         entryDate: format(entry.entryDate, "yyyy-MM-dd"),
-        startTime: entry.startTime.toISOString(),
-        endTime: entry.endTime.toISOString(),
-        // Format times for display - using UTC methods to get exact time values
-        startTimeFormatted: formatTimeLocal(entry.startTime),
-        endTimeFormatted: formatTimeLocal(entry.endTime),
+        // Return local IST times for display
+        startTime: localStartTime.toISOString(),
+        endTime: localEndTime.toISOString(),
+        // Format times for display - using local IST
+        startTimeFormatted: formatTimeLocal(localStartTime),
+        endTimeFormatted: formatTimeLocal(localEndTime),
       durationMinutes: entry.durationMinutes,
       status: entry.status,
       notes: entry.notes,

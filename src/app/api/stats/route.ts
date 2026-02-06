@@ -74,9 +74,9 @@ export async function GET(request: Request) {
     const eveningEndHour = workspace?.eveningEndHour ?? 22
 
     // Timezone offset for period calculations
-    // NOTE: Entries are stored in local time (not UTC), so no offset needed
-    // The times in the database (e.g., 09:00) represent local time directly
-    const timezoneOffsetMins = 0
+    // NOTE: Entries are now stored in UTC. To calculate day/evening/night periods,
+    // we need to convert UTC to local IST time. IST = UTC+5:30 = +330 minutes
+    const timezoneOffsetMins = 330
 
     // Build where clause matching time-entries API behavior:
     // - Employees see only their own entries

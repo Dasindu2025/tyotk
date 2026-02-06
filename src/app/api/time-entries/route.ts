@@ -98,11 +98,22 @@ export async function GET(request: NextRequest) {
     // IMPORTANT: Format entryDate as YYYY-MM-DD string to prevent timezone conversion issues
     // When entryDate (stored as @db.Date) is serialized as ISO timestamp (e.g., 2024-01-23T00:00:00.000Z),
     // clients in different timezones may interpret it as a different calendar date
+    
+    // IST timezone offset: +5:30 = 330 minutes
+    // To convert UTC to local IST: add 330 minutes
+    const TIMEZONE_OFFSET_MS = 330 * 60 * 1000
+    
+    // Convert UTC Date to local IST Date for display
+    const convertUTCToLocal = (utcDate: Date): Date => {
+      return new Date(utcDate.getTime() + TIMEZONE_OFFSET_MS)
+    }
+    
     const data = entries.map((entry) => ({
       id: entry.id,
       entryDate: format(entry.entryDate, "yyyy-MM-dd"),
-      startTime: entry.startTime,
-      endTime: entry.endTime,
+      // Convert UTC times to local IST for display
+      startTime: convertUTCToLocal(entry.startTime),
+      endTime: convertUTCToLocal(entry.endTime),
       durationMinutes: entry.durationMinutes,
       status: entry.status,
       notes: entry.notes,
@@ -182,18 +193,28 @@ export async function POST(request: NextRequest) {
 
     const { startTime, endTime, projectId, workplaceId, notes, entryDate, crossesMidnight } = validation.data
     
-    // Parse datetime strings as UTC to avoid timezone issues
-    // Format: "2026-01-26T21:00:00"
-    const parseLocalDateTime = (dtString: string): Date => {
+    // IST timezone offset: +5:30 = 330 minutes
+    // To convert local IST time to UTC: subtract 330 minutes
+    const TIMEZONE_OFFSET_MINUTES = 330
+    
+    // Parse local datetime string and convert to UTC
+    // Input format: "2026-01-26T21:00:00" (local IST time)
+    // Output: UTC Date object (21:00 IST = 15:30 UTC)
+    const parseLocalToUTC = (dtString: string): Date => {
       const [datePart, timePart] = dtString.split('T')
       const [year, month, day] = datePart.split('-').map(Number)
       const [hour, minute, second] = timePart.split(':').map(Number)
-      // Use Date.UTC to create dates in UTC timezone, treating the input as UTC
-      return new Date(Date.UTC(year, month - 1, day, hour, minute, second || 0))
+      
+      // Create date in local time (treating input as local time)
+      const localDate = new Date(year, month - 1, day, hour, minute, second || 0)
+      
+      // Convert to UTC by subtracting timezone offset
+      // IST is UTC+5:30, so subtract 330 minutes to get UTC
+      return new Date(localDate.getTime() - TIMEZONE_OFFSET_MINUTES * 60 * 1000)
     }
     
-    const startDate = parseLocalDateTime(startTime)
-    const endDate = parseLocalDateTime(endTime)
+    const startDate = parseLocalToUTC(startTime)
+    const endDate = parseLocalToUTC(endTime)
 
     // Validate the time entry
     const entryValidation = validateTimeEntry({
