@@ -200,17 +200,24 @@ export async function POST(request: NextRequest) {
     // Parse local datetime string and convert to UTC
     // Input format: "2026-01-26T21:00:00" (local IST time)
     // Output: UTC Date object (21:00 IST = 15:30 UTC)
+    // 
+    // IMPORTANT: We use Date.UTC() to avoid server timezone issues.
+    // The input is treated as IST time, so we:
+    // 1. Create date components as if they were UTC
+    // 2. Subtract IST offset to get actual UTC time
     const parseLocalToUTC = (dtString: string): Date => {
       const [datePart, timePart] = dtString.split('T')
       const [year, month, day] = datePart.split('-').map(Number)
       const [hour, minute, second] = timePart.split(':').map(Number)
       
-      // Create date in local time (treating input as local time)
-      const localDate = new Date(year, month - 1, day, hour, minute, second || 0)
+      // Create date in UTC using the IST time values directly
+      // This gives us a timestamp as if the time was UTC
+      const asUtcMs = Date.UTC(year, month - 1, day, hour, minute, second || 0)
       
-      // Convert to UTC by subtracting timezone offset
-      // IST is UTC+5:30, so subtract 330 minutes to get UTC
-      return new Date(localDate.getTime() - TIMEZONE_OFFSET_MINUTES * 60 * 1000)
+      // Since the input time is actually IST (UTC+5:30), we need to subtract
+      // the offset to get the real UTC time
+      // Example: 21:00 IST → treated as 21:00 UTC → subtract 5:30 → 15:30 UTC
+      return new Date(asUtcMs - TIMEZONE_OFFSET_MINUTES * 60 * 1000)
     }
     
     const startDate = parseLocalToUTC(startTime)
