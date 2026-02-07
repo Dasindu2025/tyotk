@@ -100,20 +100,40 @@ export async function GET(request: NextRequest) {
     // clients in different timezones may interpret it as a different calendar date
     
     // IST timezone offset: +5:30 = 330 minutes
-    // To convert UTC to local IST: add 330 minutes
-    const TIMEZONE_OFFSET_MS = 330 * 60 * 1000
+    const TIMEZONE_OFFSET_MINS = 330
     
-    // Convert UTC Date to local IST Date for display
-    const convertUTCToLocal = (utcDate: Date): Date => {
-      return new Date(utcDate.getTime() + TIMEZONE_OFFSET_MS)
+    // Format UTC time as local IST time string (HH:mm format)
+    // This prevents double timezone conversion when frontend receives the data
+    const formatUTCToLocalTimeString = (utcDate: Date): string => {
+      // Get UTC hours and minutes
+      const utcMins = utcDate.getUTCHours() * 60 + utcDate.getUTCMinutes()
+      // Add IST offset
+      let localMins = utcMins + TIMEZONE_OFFSET_MINS
+      // Handle day overflow
+      if (localMins >= 24 * 60) localMins -= 24 * 60
+      if (localMins < 0) localMins += 24 * 60
+      
+      const hours = Math.floor(localMins / 60)
+      const mins = localMins % 60
+      return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
+    }
+    
+    // Convert UTC to local IST Date for ISO string output (used for sorting/comparison)
+    const convertUTCToLocalISO = (utcDate: Date): string => {
+      const localDate = new Date(utcDate.getTime() + TIMEZONE_OFFSET_MINS * 60 * 1000)
+      // Return ISO string but it represents IST time, not UTC
+      return localDate.toISOString()
     }
     
     const data = entries.map((entry) => ({
       id: entry.id,
       entryDate: format(entry.entryDate, "yyyy-MM-dd"),
-      // Convert UTC times to local IST for display
-      startTime: convertUTCToLocal(entry.startTime),
-      endTime: convertUTCToLocal(entry.endTime),
+      // Return BOTH: ISO for compatibility and formatted string for display
+      startTime: entry.startTime.toISOString(), // Keep original UTC for API compatibility
+      endTime: entry.endTime.toISOString(),     // Keep original UTC for API compatibility
+      // Formatted times for UI display - these are the correct local times
+      startTimeFormatted: formatUTCToLocalTimeString(entry.startTime),
+      endTimeFormatted: formatUTCToLocalTimeString(entry.endTime),
       durationMinutes: entry.durationMinutes,
       status: entry.status,
       notes: entry.notes,
