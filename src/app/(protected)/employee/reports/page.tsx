@@ -25,6 +25,8 @@ interface TimeEntry {
   entryDate: string
   startTime: string
   endTime: string
+  startTimeFormatted?: string  // Pre-formatted IST time string from API
+  endTimeFormatted?: string    // Pre-formatted IST time string from API
   durationMinutes: number
   status: "PENDING" | "APPROVED" | "REJECTED"
   notes?: string
@@ -95,18 +97,11 @@ export default function EmployeeReportsPage() {
 
   function exportCSV() {
     const headers = ["Date", "Start", "End", "Duration", "Project", "Workplace", "Status", "Notes"]
-    // Extract time directly from ISO string to avoid timezone conversion
-    const extractTime = (isoString: string) => {
-      if (typeof isoString === 'string' && isoString.includes('T')) {
-        return isoString.substring(11, 16) // Extract HH:mm from ISO string
-      }
-      const date = new Date(isoString)
-      return `${date.getUTCHours().toString().padStart(2, '0')}:${date.getUTCMinutes().toString().padStart(2, '0')}`
-    }
+    // Use pre-formatted IST times from API
     const rows = entries.map((e) => [
       format(new Date(e.entryDate), "yyyy-MM-dd"),
-      extractTime(e.startTime),
-      extractTime(e.endTime),
+      e.startTimeFormatted || "00:00",
+      e.endTimeFormatted || "00:00",
       formatMinutesToHours(e.durationMinutes),
       e.project?.name || "",
       e.workplace?.name || "",
@@ -303,17 +298,7 @@ export default function EmployeeReportsPage() {
                           {format(new Date(entry.entryDate), "MMM d, yyyy")}
                         </td>
                         <td className="py-3 px-2 text-slate-300">
-                          {typeof entry.startTime === 'string' && entry.startTime.includes('T')
-                            ? entry.startTime.substring(11, 16)
-                            : (() => {
-                                const start = new Date(entry.startTime)
-                                return `${start.getUTCHours().toString().padStart(2, '0')}:${start.getUTCMinutes().toString().padStart(2, '0')}`
-                              })()} - {typeof entry.endTime === 'string' && entry.endTime.includes('T')
-                            ? entry.endTime.substring(11, 16)
-                            : (() => {
-                                const end = new Date(entry.endTime)
-                                return `${end.getUTCHours().toString().padStart(2, '0')}:${end.getUTCMinutes().toString().padStart(2, '0')}`
-                              })()}
+                          {entry.startTimeFormatted || "00:00"} - {entry.endTimeFormatted || "00:00"}
                         </td>
                         <td className="py-3 px-2 text-indigo-400 font-medium">
                           {formatMinutesToHours(entry.durationMinutes)}

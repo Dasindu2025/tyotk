@@ -28,6 +28,8 @@ interface TimeEntry {
   entryDate: string
   startTime: string
   endTime: string
+  startTimeFormatted?: string  // Pre-formatted IST time string from API
+  endTimeFormatted?: string    // Pre-formatted IST time string from API
   durationMinutes: number
   status: "PENDING" | "APPROVED" | "REJECTED"
   project?: { name: string; color: string }
@@ -414,22 +416,10 @@ export default function EmployeeDashboardPage() {
                         <div>
                           <p className="text-sm font-medium text-white">
                             {(() => {
-                              // Extract time from ISO string format "YYYY-MM-DDTHH:mm:ss" or "YYYY-MM-DDTHH:mm:ss.sssZ"
-                              const getTimeFromISO = (isoString: string) => {
-                                if (!isoString) return "00:00"
-                                // Handle both "2026-02-03T21:00:00" and "2026-02-03T21:00:00.000Z" formats
-                                const timePart = isoString.split('T')[1]
-                                if (!timePart) return "00:00"
-                                // Extract HH:mm from HH:mm:ss or HH:mm:ss.sssZ
-                                return timePart.split(':').slice(0, 2).join(':')
-                              }
-                              
-                              const startTimeStr = typeof entry.startTime === 'string' 
-                                ? getTimeFromISO(entry.startTime)
-                                : format(new Date(entry.startTime), "HH:mm")
-                              const endTimeStr = typeof entry.endTime === 'string'
-                                ? getTimeFromISO(entry.endTime)
-                                : format(new Date(entry.endTime), "HH:mm")
+                              // Use pre-formatted IST time strings from API
+                              // These are already converted from UTC to local IST by the backend
+                              const startTimeStr = entry.startTimeFormatted || "00:00"
+                              const endTimeStr = entry.endTimeFormatted || "00:00"
                               return `${startTimeStr} - ${endTimeStr}`
                             })()}
                           </p>
