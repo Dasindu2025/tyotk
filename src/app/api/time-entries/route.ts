@@ -366,9 +366,11 @@ export async function POST(request: NextRequest) {
       // Second entry date: the end date at midnight UTC
       const secondDate = new Date(Date.UTC(endYear, endMonth - 1, endDay, 0, 0, 0, 0))
       
-      // Midnight split point: start of the end date at midnight UTC
-      const splitPointTime = new Date(Date.UTC(endYear, endMonth - 1, endDay, splitHour, 0, 0, 0))
-      const splitPointUTC = splitPointTime.getTime()
+      // CRITICAL: Midnight split point must be in LOCAL timezone (Finland), not UTC
+      // Finland 00:00 = UTC 22:00 (previous day) because Finland is GMT+2 (120 min ahead)
+      // To get UTC time for Finland midnight: create midnight UTC then SUBTRACT timezone offset
+      const midnightLocalAsUTC = Date.UTC(endYear, endMonth - 1, endDay, splitHour, 0, 0, 0)
+      const splitPointUTC = midnightLocalAsUTC - (TIMEZONE_OFFSET_MINUTES * 60 * 1000)
       
       // First entry: from startDate to split point
       const firstDuration = Math.round((splitPointUTC - startDate.getTime()) / (1000 * 60))
