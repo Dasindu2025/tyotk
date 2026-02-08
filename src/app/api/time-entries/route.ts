@@ -99,8 +99,8 @@ export async function GET(request: NextRequest) {
     // When entryDate (stored as @db.Date) is serialized as ISO timestamp (e.g., 2024-01-23T00:00:00.000Z),
     // clients in different timezones may interpret it as a different calendar date
     
-    // IST timezone offset: +5:30 = 330 minutes
-    const TIMEZONE_OFFSET_MINS = 330
+    // Finland timezone offset: GMT+2 = 120 minutes
+    const TIMEZONE_OFFSET_MINS = 120
     
     // Format UTC time as local IST time string (HH:mm format)
     // This prevents double timezone conversion when frontend receives the data
@@ -213,9 +213,9 @@ export async function POST(request: NextRequest) {
 
     const { startTime, endTime, projectId, workplaceId, notes, entryDate, crossesMidnight } = validation.data
     
-    // IST timezone offset: +5:30 = 330 minutes
-    // To convert local IST time to UTC: subtract 330 minutes
-    const TIMEZONE_OFFSET_MINUTES = 330
+    // Finland timezone offset: GMT+2 = 120 minutes
+    // To convert local Finland time to UTC: subtract 120 minutes
+    const TIMEZONE_OFFSET_MINUTES = 120
     
     // Parse local datetime string and convert to UTC
     // Input format: "2026-01-26T21:00:00" (local IST time)

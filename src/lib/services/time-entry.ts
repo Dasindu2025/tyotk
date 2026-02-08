@@ -190,7 +190,7 @@ export function groupEntriesByDate<T extends { entryDate: Date }>(
  * @param dayStartHour - Hour when day period starts (6 = 6:00 AM local)
  * @param dayEndHour - Hour when day period ends / evening starts (18 = 6:00 PM local)
  * @param eveningEndHour - Hour when evening ends / night starts (22 = 10:00 PM local)
- * @param timezoneOffsetMins - Timezone offset in minutes from UTC (e.g., IST = +330)
+ * @param timezoneOffsetMins - Timezone offset in minutes from UTC (e.g., Finland GMT+2 = +120)
  */
 export function calculatePeriodSplit(
   startTime: Date,
@@ -198,7 +198,7 @@ export function calculatePeriodSplit(
   dayStartHour: number,
   dayEndHour: number,
   eveningEndHour: number,
-  timezoneOffsetMins: number = 330 // Default to IST (+5:30)
+  timezoneOffsetMins: number = 120 // Default to Finland GMT+2
 ): { dayMins: number; eveningMins: number; nightMins: number } {
   // Convert UTC times to local time by adding timezone offset
   // UTC hours + offset = local hours

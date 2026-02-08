@@ -75,8 +75,8 @@ export async function GET(request: Request) {
 
     // Timezone offset for period calculations
     // NOTE: Entries are now stored in UTC. To calculate day/evening/night periods,
-    // we need to convert UTC to local IST time. IST = UTC+5:30 = +330 minutes
-    const timezoneOffsetMins = 330
+    // we need to convert UTC to local Finland time. Finland = GMT+2 = +120 minutes
+    const timezoneOffsetMins = 120
 
     // Build where clause matching time-entries API behavior:
     // - Employees see only their own entries

@@ -87,8 +87,8 @@ export async function GET(request: NextRequest) {
       prisma.timeEntry.count({ where }),
     ])
 
-    // IST timezone offset: +5:30 = 330 minutes
-    const TIMEZONE_OFFSET_MINS = 330
+    // Finland timezone offset: GMT+2 = 120 minutes
+    const TIMEZONE_OFFSET_MINS = 120
     
     // Format UTC time as local IST time string (HH:mm format)
     // This prevents double timezone conversion - uses UTC methods, server-agnostic

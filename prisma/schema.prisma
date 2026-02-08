@@ -71,7 +71,7 @@ model Workspace {
   dayEndHour     Int          @default(18)  // Day ends / Evening starts at 6:00 PM
   eveningEndHour Int          @default(22)  // Evening ends / Night starts at 10:00 PM
   daySplitHour   Int          @default(0)   // Hour when day splits for time entries (0=midnight)
-  timezone       String       @default("Asia/Kolkata") // Workspace timezone for display/calculations
+  timezone       String       @default("Europe/Helsinki") // Workspace timezone for display/calculations (Finland GMT+2)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
