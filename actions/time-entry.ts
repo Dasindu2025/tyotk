@@ -161,13 +161,6 @@ export async function logTime(data: LogTimeInput) {
         for (const exist of existing) {
             // Double-check safeguards:
             if (exist.status === TimeEntryStatus.REJECTED) continue;
-
-            const exStart = timeToMinutes(exist.startTime);
-            const exEnd = timeToMinutes(exist.endTime);
-            // Treat 23:59 as 1440 approx for overlap safety if needed
-            if (entryStartMins < exEnd && entryEndMins > exStart) {
-                 return { error: `Overlap detected on ${entry.date.toISOString().split('T')[0]} (${entry.start}-${entry.realEnd})` };
-            }
         }
     }
 
